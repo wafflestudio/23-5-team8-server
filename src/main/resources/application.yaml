@@ -21,9 +21,5 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
 
-jwt:
-  secret: your-secret-key-at-least-256-bits-long-for-hs256
-  expiration-in-ms: 86400000
-
 server:
   port: ${SERVER_PORT:8080}

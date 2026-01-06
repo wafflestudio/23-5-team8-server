@@ -27,9 +27,22 @@ data class ErrorResponse(
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+    // NullSafety에 위배된 예외 처리 -> 404 NOT FOUND (데이터 없음)
+    @ExceptionHandler(ResourceNotFoundException::class)
+    fun handleResourceNotFoundException(e: ResourceNotFoundException): ResponseEntity<ErrorResponse> {
+        val response =
+            ErrorResponse(
+                status = HttpStatus.NOT_FOUND.value(), // 404
+                error = "Not Found",
+                message = e.message,
+                errorCode = e.errorCode,
+            )
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response)
+    }
+
     // 이메일 중복 예외 처리 → 409 CONFLICT
     @ExceptionHandler(DuplicateEmailException::class)
-    fun handleDuplicateEmail(e: DuplicateEmailException): ResponseEntity<ErrorResponse> {
+    fun handleDuplicateEmailException(e: DuplicateEmailException): ResponseEntity<ErrorResponse> {
         val response =
             ErrorResponse(
                 status = HttpStatus.CONFLICT.value(), // 409
@@ -67,7 +80,7 @@ class GlobalExceptionHandler {
         val response =
             ErrorResponse(
                 status = HttpStatus.UNAUTHORIZED.value(), // 401
-                error = "UNAUTHORIZED",
+                error = "Unauthorized",
                 message = e.message ?: "인증에 실패했습니다",
                 errorCode = "UNAUTHORIZED",
             )

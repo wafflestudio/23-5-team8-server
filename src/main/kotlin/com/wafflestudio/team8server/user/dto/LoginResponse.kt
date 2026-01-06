@@ -1,5 +1,6 @@
 package com.wafflestudio.team8server.user.dto
 
+import com.wafflestudio.team8server.user.dto.coreDto.UserDto
 import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(description = "로그인 응답")

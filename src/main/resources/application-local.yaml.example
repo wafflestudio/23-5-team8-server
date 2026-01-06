@@ -2,3 +2,7 @@ spring:
   datasource:
     username: user
     password: change-me
+
+jwt:
+  secret: change-me
+  expiration-in-ms: change-me (recommend over 8640000)

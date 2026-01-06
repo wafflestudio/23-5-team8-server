@@ -17,5 +17,5 @@ class User(
     @Id
     // DB가 자동으로 ID 생성
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0L,
+    val id: Long? = null,
 ) : BaseEntity()

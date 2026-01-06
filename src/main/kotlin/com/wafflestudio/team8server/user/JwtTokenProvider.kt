@@ -1,5 +1,6 @@
 package com.wafflestudio.team8server.user
 
+import com.wafflestudio.team8server.common.extension.ensureNotNull
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
@@ -21,7 +22,7 @@ class JwtTokenProvider(
     }
 
     fun createToken(
-        userId: Long,
+        userId: Long?,
         email: String,
     ): String {
         val now = Date()
@@ -29,7 +30,7 @@ class JwtTokenProvider(
 
         return Jwts
             .builder()
-            .subject(userId.toString()) // 토큰의 주체(subject): 사용자 ID
+            .subject(userId.ensureNotNull().toString()) // 토큰의 주체(subject): 사용자 ID
             .claim("email", email) // 추가 정보: 이메일
             .issuedAt(now) // 토큰 발급 시간
             .expiration(expiryDate) // 토큰 만료 시간

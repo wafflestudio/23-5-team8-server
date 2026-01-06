@@ -13,13 +13,13 @@ data class SignupRequest(
     @Schema(description = "사용자 이메일 주소", example = "user@example.com", required = true)
     val email: String,
     @field:NotBlank(message = "비밀번호는 필수입니다")
-    @field:Size(min = 8, max = 64, message = "비밀번호는 8자 이상 64자 이하여야 합니다")
+    @field:Size(min = 8, max = 20, message = "비밀번호는 8자 이상 20자 이하여야 합니다")
     @field:Pattern(
         regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@\$!%*#?&])[A-Za-z\\d@\$!%*#?&]+\$",
         message = "비밀번호는 영문, 숫자, 특수문자를 포함해야 합니다",
     )
     @Schema(
-        description = "비밀번호 (8-64자, 영문/숫자/특수문자 포함)",
+        description = "비밀번호 (8-20자, 영문/숫자/특수문자 포함)",
         example = "password123!",
         required = true,
     )

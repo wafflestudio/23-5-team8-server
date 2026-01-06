@@ -1,33 +1,15 @@
 package com.wafflestudio.team8server.user.dto
 
-import com.wafflestudio.team8server.user.model.User
+import com.wafflestudio.team8server.user.dto.coreDto.UserDto
 import io.swagger.v3.oas.annotations.media.Schema
-import java.time.LocalDateTime
 
 @Schema(description = "회원가입 응답")
 data class SignupResponse(
-    @Schema(description = "사용자 ID", example = "1")
-    val id: Long,
-    @Schema(description = "사용자 이메일", example = "user@example.com")
-    val email: String,
-    @Schema(description = "사용자 닉네임", example = "홍길동")
-    val nickname: String,
-    @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.jpg", nullable = true)
-    val profileImageUrl: String?,
-    @Schema(description = "계정 생성 일시", example = "2026-01-06T12:00:00")
-    val createdAt: LocalDateTime,
-) {
-    companion object {
-        fun from(
-            user: User,
-            email: String,
-        ): SignupResponse =
-            SignupResponse(
-                id = user.id,
-                email = email,
-                nickname = user.nickname,
-                profileImageUrl = user.profileImageUrl,
-                createdAt = user.createdAt,
-            )
-    }
-}
+    @Schema(description = "사용자 정보")
+    val user: UserDto,
+    @Schema(
+        description = "JWT 액세스 토큰",
+        example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIn0.abc123",
+    )
+    val accessToken: String,
+)

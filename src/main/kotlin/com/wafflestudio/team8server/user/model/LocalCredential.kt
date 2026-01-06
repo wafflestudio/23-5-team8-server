@@ -32,5 +32,5 @@ class LocalCredential(
     var passwordHash: String,
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0L,
+    val id: Long? = null,
 ) : BaseEntity()

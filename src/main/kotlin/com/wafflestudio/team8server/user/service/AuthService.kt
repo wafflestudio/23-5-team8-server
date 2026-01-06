@@ -2,12 +2,13 @@ package com.wafflestudio.team8server.user.service
 
 import com.wafflestudio.team8server.common.exception.DuplicateEmailException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
+import com.wafflestudio.team8server.common.extension.ensureNotNull
 import com.wafflestudio.team8server.user.JwtTokenProvider
 import com.wafflestudio.team8server.user.dto.LoginRequest
 import com.wafflestudio.team8server.user.dto.LoginResponse
 import com.wafflestudio.team8server.user.dto.SignupRequest
 import com.wafflestudio.team8server.user.dto.SignupResponse
-import com.wafflestudio.team8server.user.dto.UserDto
+import com.wafflestudio.team8server.user.dto.coreDto.UserDto
 import com.wafflestudio.team8server.user.model.LocalCredential
 import com.wafflestudio.team8server.user.model.User
 import com.wafflestudio.team8server.user.repository.LocalCredentialRepository
@@ -51,8 +52,13 @@ class AuthService(
             )
         localCredentialRepository.save(credential)
 
+        val accessToken = jwtTokenProvider.createToken(savedUser.id.ensureNotNull(), request.email)
+
         // 5. 응답 DTO 반환
-        return SignupResponse.from(savedUser, request.email)
+        return SignupResponse(
+            accessToken = accessToken,
+            user = UserDto.from(user),
+        )
     }
 
     fun login(request: LoginRequest): LoginResponse {
@@ -67,7 +73,7 @@ class AuthService(
         }
 
         // 3. JWT 토큰 발급
-        val accessToken = jwtTokenProvider.createToken(credential.user.id, credential.email)
+        val accessToken = jwtTokenProvider.createToken(credential.user.id.ensureNotNull(), credential.email)
 
         // 4. 응답 반환
         return LoginResponse(
