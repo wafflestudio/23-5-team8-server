@@ -1,6 +1,5 @@
-version: '3.8'
-
 services:
+  # MySQL 데이터베이스 (영구 데이터 저장)
   mysql:
     image: mysql:8.4
     container_name: mysql-db
@@ -14,5 +13,15 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  # Redis (JWT 토큰 블랙리스트 저장)
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
 volumes:
   mysql_data:
+  redis_data:

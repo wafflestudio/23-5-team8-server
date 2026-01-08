@@ -45,3 +45,9 @@ docker compose down
 1. Run / Debug Configurations
 2. Spring Boot 선택
 3. Active profiles에 "local" 입력 후 적용
+
+### 4. Swagger UI 접속 방법
+
+애플리케이션을 실행한 후:
+- Swagger UI: http://localhost:8080/swagger-ui/index.html
+- OpenAPI JSON: http://localhost:8080/v3/api-docs

@@ -1,0 +1,19 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true # 테스트 시 SQL 로그 출력
+
+  flyway:
+    enabled: true
+
+jwt:
+  # 테스트용 시크릿 키
+  secret: test-secret-key-for-testing-at-least-256-bits-long-hs256-algorithm
+  expiration-in-ms: 3600000 # 1시간 (테스트용으로 짧게 설정)
+
+server:
+  port: 0 # 랜덤 포트 사용
