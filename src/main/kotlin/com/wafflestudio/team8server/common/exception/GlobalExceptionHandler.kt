@@ -87,6 +87,42 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response)
     }
 
+    @ExceptionHandler(PracticeTimeExpiredException::class)
+    fun handlePracticeTimeExpiredException(e: PracticeTimeExpiredException): ResponseEntity<ErrorResponse> {
+        val response =
+            ErrorResponse(
+                status = HttpStatus.BAD_REQUEST.value(), // 400
+                error = "Bad Request",
+                message = e.message,
+                errorCode = e.errorCode,
+            )
+        return ResponseEntity.badRequest().body(response)
+    }
+
+    @ExceptionHandler(NoActiveSessionException::class)
+    fun handleNoActiveSessionException(e: NoActiveSessionException): ResponseEntity<ErrorResponse> {
+        val response =
+            ErrorResponse(
+                status = HttpStatus.BAD_REQUEST.value(), // 400
+                error = "Bad Request",
+                message = e.message,
+                errorCode = e.errorCode,
+            )
+        return ResponseEntity.badRequest().body(response)
+    }
+
+    @ExceptionHandler(ActiveSessionExistsException::class)
+    fun handleActiveSessionExistsException(e: ActiveSessionExistsException): ResponseEntity<ErrorResponse> {
+        val response =
+            ErrorResponse(
+                status = HttpStatus.CONFLICT.value(), // 409
+                error = "Conflict",
+                message = e.message,
+                errorCode = e.errorCode,
+            )
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response)
+    }
+
     // 예상하지 못한 예외를 잡는 handler
     @ExceptionHandler(Exception::class)
     fun handleUnexpectedException(e: Exception): ResponseEntity<ErrorResponse> {
