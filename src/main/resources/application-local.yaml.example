@@ -6,3 +6,12 @@ spring:
 jwt:
   secret: change-me
   expiration-in-ms: change-me (recommend over 8640000)
+
+oauth:
+  kakao:
+    client-id: change-me
+    client-secret: change-me
+
+  google:
+    client-id: change-me
+    client-secret: change-me
