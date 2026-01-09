@@ -18,6 +18,6 @@ data class OAuthProperties(
         val clientSecret: String,
         val tokenUri: String,
         val issuer: String,
-        val jwkSerUri: String,
+        val jwkSetUri: String,
     )
 }
