@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-app
+  labels:
+    app: backend
+spec:
+  replicas: 1 # 트래픽 비례하게 올려야 함
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: ${DOCKER_IMAGE_NAME} # GITHUB ACTION이 실제 IMAGE로 대체
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql.default.svc.cluster.local:3306/my_database?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+            - name: SPRING_DATASOURCE_USERNAME
+              value: root
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "${DB_PASSWORD}"
+            - name: SPRING_REDIS_HOST
+              value: redis-master.default.svc.cluster.local
+            - name: SPRING_REDIS_PORT
+              value: "6379"
+            - name: SPRING_REDIS_PASSWORD
+              value: "${REDIS_PASSWORD}"
+            - name: JWT_SECRET
+              value: "${JWT_SECRET}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 80         # 외부(LoadBalancer) 포트
+      targetPort: 8080 # 내부(Spring Boot) 포트
+  type: LoadBalancer
