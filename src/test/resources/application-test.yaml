@@ -1,19 +1,13 @@
 spring:
+  config:
+    activate:
+      on-profile: test
+  # mysql, reddis 관련 설정은 testcontainer 라이브러리로 자동화
   jpa:
     hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        format_sql: true
-    show-sql: true # 테스트 시 SQL 로그 출력
-
-  flyway:
-    enabled: true
+      ddl-auto: create-drop # 테스트 후 초기화 (어차피 container 내려가면서 초기화지만 안정성 확보)
+    show-sql: true
 
 jwt:
-  # 테스트용 시크릿 키
   secret: test-secret-key-for-testing-at-least-256-bits-long-hs256-algorithm
-  expiration-in-ms: 3600000 # 1시간 (테스트용으로 짧게 설정)
-
-server:
-  port: 0 # 랜덤 포트 사용
+  expiration-in-ms: 36000000
