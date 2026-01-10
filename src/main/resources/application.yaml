@@ -36,4 +36,4 @@ oauth:
     client-secret: ${GOOGLE_CLIENT_SECRET}
     token-uri: https://oauth2.googleapis.com/token
     issuer: https://accounts.google.com
-    jwk-ser-uri: https://www.googleapis.com/oauth2/v3/certs
+    jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
