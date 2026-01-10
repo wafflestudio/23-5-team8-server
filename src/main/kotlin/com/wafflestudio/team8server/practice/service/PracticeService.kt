@@ -5,6 +5,7 @@ import com.wafflestudio.team8server.common.exception.NoActiveSessionException
 import com.wafflestudio.team8server.common.exception.PracticeTimeExpiredException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.common.time.TimeProvider
+import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
@@ -25,6 +26,7 @@ class PracticeService(
     private val practiceLogRepository: PracticeLogRepository,
     private val practiceDetailRepository: PracticeDetailRepository,
     private val userRepository: UserRepository,
+    private val courseRepository: CourseRepository,
     private val practiceSessionService: PracticeSessionService,
     private val config: PracticeSessionConfig,
     private val timeProvider: TimeProvider,
@@ -123,16 +125,17 @@ class PracticeService(
             practiceLogRepository.findByIdOrNull(practiceLogId)
                 ?: throw ResourceNotFoundException("연습 세션을 찾을 수 없습니다")
 
-        // TODO: Course API 구현 후 주석 해제
         // 4. Course 존재 여부 검증
-        // val course = courseRepository.findByIdOrNull(request.courseId)
-        //     ?: throw ResourceNotFoundException("강의를 찾을 수 없습니다")
+        val course =
+            courseRepository.findByIdOrNull(request.courseId)
+                ?: throw ResourceNotFoundException("강의를 찾을 수 없습니다 (ID: ${request.courseId})")
 
         // 5. Early Click 처리 (targetTime 기준 0ms 이하)
         if (request.userLatencyMs <= 0) {
             return handleEarlyClick(
                 request = request,
                 practiceLog = practiceLog,
+                course = course,
             )
         }
 
@@ -156,7 +159,7 @@ class PracticeService(
         val practiceDetail =
             PracticeDetail(
                 practiceLog = practiceLog,
-                courseId = request.courseId,
+                course = course,
                 isSuccess = isSuccess,
                 reactionTime = request.userLatencyMs,
                 earlyClickDiff = null,
@@ -199,28 +202,33 @@ class PracticeService(
 
     /**
      * Early Click (너무 일찍 클릭한 경우)을 처리합니다.
-     * earlyClickThresholdMs ~ 0ms 사이인 경우 DB에 기록하고,
+     * earlyClickRecordingWindowMs 범위 내인 경우 DB에 기록하고,
      * 그 외에는 기록하지 않습니다.
      */
     private fun handleEarlyClick(
         request: PracticeAttemptRequest,
         practiceLog: PracticeLog,
+        course: com.wafflestudio.team8server.course.model.Course,
     ): PracticeAttemptResponse {
-        val shouldRecord = request.userLatencyMs >= config.earlyClickThresholdMs
+        // 일찍 클릭한 시간 (양수로 변환)
+        val earlyClickAmount = kotlin.math.abs(request.userLatencyMs)
+
+        // 기록 범위 내인지 확인 (예: 1500ms <= 5000ms → 기록, 6000ms <= 5000ms → 기록 안 함)
+        val shouldRecord = earlyClickAmount <= config.earlyClickRecordingWindowMs
 
         if (shouldRecord) {
-            // -1000ms ~ 0ms 사이: DB에 기록
+            // earlyClickRecordingWindowMs 범위 내: DB에 기록
             val practiceDetail =
                 PracticeDetail(
                     practiceLog = practiceLog,
-                    courseId = request.courseId,
+                    course = course,
                     isSuccess = false,
                     reactionTime = 0, // Early click이므로 reactionTime은 0으로 설정
                     earlyClickDiff = request.userLatencyMs, // 음수 값으로 저장
                 )
             practiceDetailRepository.save(practiceDetail)
 
-            val message = "너무 일찍 클릭했습니다! (${kotlin.math.abs(request.userLatencyMs)}ms 일찍 클릭)"
+            val message = "너무 일찍 클릭했습니다! (${earlyClickAmount}ms 일찍 클릭)"
 
             return PracticeAttemptResponse(
                 isSuccess = false,
@@ -231,8 +239,8 @@ class PracticeService(
                 earlyClickDiff = request.userLatencyMs,
             )
         } else {
-            // < -1000ms: DB에 기록하지 않음
-            val message = "너무 일찍 클릭했습니다!"
+            // earlyClickRecordingWindowMs 범위 밖: DB에 기록하지 않음
+            val message = "너무 일찍 클릭했습니다! (${earlyClickAmount}ms 일찍 클릭)"
 
             return PracticeAttemptResponse(
                 isSuccess = false,

@@ -1,5 +1,6 @@
 package com.wafflestudio.team8server.practice.model
 
+import com.wafflestudio.team8server.course.model.Course
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -16,8 +17,9 @@ class PracticeDetail(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "log_id", nullable = false)
     val practiceLog: PracticeLog,
-    @Column(name = "course_id", nullable = true)
-    val courseId: Long?,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id", nullable = true)
+    val course: Course?,
     @Column(name = "is_success", nullable = false)
     val isSuccess: Boolean,
     @Column(name = "reaction_time", nullable = false)

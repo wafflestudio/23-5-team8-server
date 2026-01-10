@@ -33,17 +33,20 @@ class PracticeSessionConfig {
     var timeLimitSeconds: Long = 300L
 
     /**
-     * Early click 기록 임계값 (밀리초)
-     * 이 값보다 큰 early click은 DB에 기록됩니다.
-     * 기본값: -5000ms (-5초)
+     * Early click 기록 범위 (밀리초)
+     * 이 값 이내로 일찍 클릭한 경우 DB에 기록됩니다.
+     * 예: 5000ms이면 targetTime보다 5초 이내로 일찍 클릭한 경우 기록
+     * 기본값: 5000ms (5초)
      */
-    var earlyClickThresholdMs: Int = -5000
+    var earlyClickRecordingWindowMs: Int = 5000
 
     /**
      * 분산 락 TTL (초 단위)
-     * 기본값: 3초
+     * 정상 상황에서는 finally 블록에서 즉시 해제되므로 사용되지 않습니다.
+     * 서버 크래시 등 비정상 상황에서 락이 영구히 걸리는 것을 방지하는 안전장치입니다.
+     * 기본값: 10초
      */
-    var lockTtlSeconds: Long = 3L
+    var lockTtlSeconds: Long = 10L
 
     // ========== Calculated Properties ==========
 
