@@ -2,6 +2,11 @@ package com.wafflestudio.team8server.practice
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.wafflestudio.team8server.TestcontainersConfiguration
+import com.wafflestudio.team8server.common.time.MockTimeProvider
+import com.wafflestudio.team8server.common.time.TimeProvider
+import com.wafflestudio.team8server.course.model.Course
+import com.wafflestudio.team8server.course.model.Semester
+import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
 import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
@@ -14,19 +19,30 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.Primary
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.web.context.WebApplicationContext
 
+@TestConfiguration
+class PracticeTestConfig {
+    @Bean
+    @Primary
+    fun mockTimeProvider(): MockTimeProvider = MockTimeProvider(currentTime = 1000000000L)
+}
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Import(TestcontainersConfiguration::class)
+@Import(TestcontainersConfiguration::class, PracticeTestConfig::class)
 class PracticeControllerTest
     @Autowired
     constructor(
@@ -35,20 +51,45 @@ class PracticeControllerTest
         private val localCredentialRepository: LocalCredentialRepository,
         private val practiceLogRepository: PracticeLogRepository,
         private val practiceDetailRepository: PracticeDetailRepository,
+        private val courseRepository: CourseRepository,
         private val practiceSessionService: PracticeSessionService,
+        private val mockTimeProvider: MockTimeProvider,
     ) {
         private lateinit var mockMvc: MockMvc
+        private lateinit var savedCourse: Course
         private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
 
         @BeforeEach
         fun setUp() {
-            mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build()
+            mockMvc =
+                MockMvcBuilders
+                    .webAppContextSetup(webApplicationContext)
+                    .apply<org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder>(springSecurity())
+                    .build()
 
             // DB 및 세션 초기화
             practiceDetailRepository.deleteAll()
             practiceLogRepository.deleteAll()
             localCredentialRepository.deleteAll()
             userRepository.deleteAll()
+            courseRepository.deleteAll()
+
+            // Mock 시간 초기화 (기준 시간: 1000000000ms)
+            mockTimeProvider.setTime(1000000000L)
+
+            // 테스트용 Course 데이터 생성 (생성된 ID 저장)
+            savedCourse =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "TEST001",
+                        lectureNumber = "001",
+                        courseTitle = "테스트 강의",
+                        quota = 100,
+                        instructor = "테스트 교수",
+                    ),
+                )
         }
 
         /**
@@ -170,9 +211,8 @@ class PracticeControllerTest
 
             val request =
                 PracticeAttemptRequest(
-                    courseId = 1L,
+                    courseId = savedCourse.id!!,
                     userLatencyMs = 100,
-                    currentVirtualTime = "08:30:01",
                     totalCompetitors = 100,
                     capacity = 40,
                     scale = 5.0,
@@ -194,17 +234,19 @@ class PracticeControllerTest
         fun `attempt practice after time limit returns 400`() {
             val token = signupAndGetToken()
 
-            // 세션 시작
+            // 세션 시작 (현재 시간: 1000000000ms)
             mockMvc.perform(
                 post("/api/practice/start")
                     .header("Authorization", "Bearer $token"),
             )
 
+            // 5분 1초 경과 (300000ms + 1000ms = 301000ms)
+            mockTimeProvider.advance(301000)
+
             val request =
                 PracticeAttemptRequest(
-                    courseId = 1L,
+                    courseId = savedCourse.id!!,
                     userLatencyMs = 100,
-                    currentVirtualTime = "08:33:01", // 08:33:00 이후
                     totalCompetitors = 100,
                     capacity = 40,
                     scale = 5.0,
@@ -234,9 +276,8 @@ class PracticeControllerTest
 
             val request =
                 PracticeAttemptRequest(
-                    courseId = 1L,
+                    courseId = savedCourse.id!!,
                     userLatencyMs = -1500, // -1.5초 (기록 범위 내)
-                    currentVirtualTime = "08:30:00",
                     totalCompetitors = 100,
                     capacity = 40,
                     scale = 5.0,
@@ -271,9 +312,8 @@ class PracticeControllerTest
 
             val request =
                 PracticeAttemptRequest(
-                    courseId = 1L,
+                    courseId = savedCourse.id!!,
                     userLatencyMs = -6000, // -6초 (기록 범위 밖)
-                    currentVirtualTime = "08:29:54",
                     totalCompetitors = 100,
                     capacity = 40,
                     scale = 5.0,
@@ -305,9 +345,8 @@ class PracticeControllerTest
 
             val request =
                 PracticeAttemptRequest(
-                    courseId = 1L,
+                    courseId = savedCourse.id!!,
                     userLatencyMs = 50, // 매우 빠른 반응 시간
-                    currentVirtualTime = "08:30:01",
                     totalCompetitors = 100,
                     capacity = 80, // 높은 정원
                     scale = 5.0,
@@ -341,9 +380,8 @@ class PracticeControllerTest
 
             val request =
                 PracticeAttemptRequest(
-                    courseId = 1L,
+                    courseId = savedCourse.id!!,
                     userLatencyMs = 5000, // 느린 반응 시간
-                    currentVirtualTime = "08:30:05",
                     totalCompetitors = 100,
                     capacity = 10, // 낮은 정원
                     scale = 5.0,
@@ -378,9 +416,8 @@ class PracticeControllerTest
             // 첫 번째 시도
             val request1 =
                 PracticeAttemptRequest(
-                    courseId = 1L,
+                    courseId = savedCourse.id!!,
                     userLatencyMs = 100,
-                    currentVirtualTime = "08:30:01",
                     totalCompetitors = 100,
                     capacity = 40,
                     scale = 5.0,
@@ -397,9 +434,8 @@ class PracticeControllerTest
             // 두 번째 시도
             val request2 =
                 PracticeAttemptRequest(
-                    courseId = 2L,
+                    courseId = savedCourse.id!!,
                     userLatencyMs = 200,
-                    currentVirtualTime = "08:30:02",
                     totalCompetitors = 100,
                     capacity = 40,
                     scale = 5.0,
@@ -436,9 +472,8 @@ class PracticeControllerTest
 
             val request =
                 PracticeAttemptRequest(
-                    courseId = 1L,
+                    courseId = savedCourse.id!!,
                     userLatencyMs = 100,
-                    currentVirtualTime = "08:30:01",
                     totalCompetitors = 0, // 유효하지 않은 값
                     capacity = 40,
                     scale = 5.0,

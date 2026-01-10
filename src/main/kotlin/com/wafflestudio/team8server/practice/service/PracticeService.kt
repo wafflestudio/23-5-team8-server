@@ -4,6 +4,8 @@ import com.wafflestudio.team8server.common.exception.ActiveSessionExistsExceptio
 import com.wafflestudio.team8server.common.exception.NoActiveSessionException
 import com.wafflestudio.team8server.common.exception.PracticeTimeExpiredException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
+import com.wafflestudio.team8server.common.time.TimeProvider
+import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
 import com.wafflestudio.team8server.practice.dto.PracticeEndResponse
@@ -15,7 +17,6 @@ import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
 import com.wafflestudio.team8server.practice.util.LogNormalDistributionUtil
 import com.wafflestudio.team8server.user.repository.UserRepository
 import org.springframework.data.repository.findByIdOrNull
-import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -25,16 +26,9 @@ class PracticeService(
     private val practiceDetailRepository: PracticeDetailRepository,
     private val userRepository: UserRepository,
     private val practiceSessionService: PracticeSessionService,
+    private val config: PracticeSessionConfig,
+    private val timeProvider: TimeProvider,
 ) {
-    companion object {
-        private const val VIRTUAL_START_TIME = "08:28:00"
-        private const val TARGET_TIME = "08:30:00"
-        private const val PRACTICE_TIME_LIMIT_MS = 300000L // 5분 (08:28:00 ~ 08:33:00)
-        private const val VIRTUAL_TARGET_TIME_OFFSET_MS = 120000L // 2분 (08:28:00 ~ 08:30:00)
-        private const val EARLY_CLICK_THRESHOLD_MS = -1000 // -1초
-        private const val TARGET_TIME_MS = 0 // 08:30:00 기준
-    }
-
     /**
      * 수강신청 연습 세션을 시작합니다.
      * - PracticeLog를 생성하고 Redis에 세션을 저장합니다.
@@ -42,8 +36,7 @@ class PracticeService(
      * - 동시성 제어를 위해 분산 락을 사용합니다.
      */
     @Transactional
-    fun startPractice(): PracticeStartResponse {
-        val userId = getCurrentUserId()
+    fun startPractice(userId: Long): PracticeStartResponse {
 
         // 1. 분산 락 획득
         val lockAcquired = practiceSessionService.acquireLock(userId)
@@ -72,10 +65,10 @@ class PracticeService(
 
             return PracticeStartResponse(
                 practiceLogId = savedLog.id!!,
-                virtualStartTime = VIRTUAL_START_TIME,
-                targetTime = TARGET_TIME,
-                timeLimit = "08:33:00",
-                message = "연습 세션이 시작되었습니다. 가상 시계가 $VIRTUAL_START_TIME 로 세팅되었습니다.",
+                virtualStartTime = config.virtualStartTime,
+                targetTime = config.targetTime,
+                timeLimit = config.timeLimit,
+                message = "연습 세션이 시작되었습니다. 가상 시계가 ${config.virtualStartTime} 로 세팅되었습니다.",
             )
         } finally {
             // 6. 락 해제
@@ -88,8 +81,7 @@ class PracticeService(
      * - Redis에서 세션을 삭제합니다.
      */
     @Transactional(readOnly = true)
-    fun endPractice(): PracticeEndResponse {
-        val userId = getCurrentUserId()
+    fun endPractice(userId: Long): PracticeEndResponse {
 
         // 1. 활성 세션 확인
         val practiceLogId =
@@ -113,8 +105,10 @@ class PracticeService(
     }
 
     @Transactional
-    fun attemptPractice(request: PracticeAttemptRequest): PracticeAttemptResponse {
-        val userId = getCurrentUserId()
+    fun attemptPractice(
+        userId: Long,
+        request: PracticeAttemptRequest,
+    ): PracticeAttemptResponse {
 
         // 1. 활성 세션 확인
         val practiceLogId =
@@ -134,8 +128,8 @@ class PracticeService(
         // val course = courseRepository.findByIdOrNull(request.courseId)
         //     ?: throw ResourceNotFoundException("강의를 찾을 수 없습니다")
 
-        // 5. Early Click 처리
-        if (request.userLatencyMs <= TARGET_TIME_MS) {
+        // 5. Early Click 처리 (targetTime 기준 0ms 이하)
+        if (request.userLatencyMs <= 0) {
             return handleEarlyClick(
                 request = request,
                 practiceLog = practiceLog,
@@ -189,30 +183,30 @@ class PracticeService(
 
     /**
      * 연습 시간이 유효한지 검증합니다.
-     * 세션 시작 후 5분(300000ms)이 초과되면 예외를 발생시킵니다.
+     * 세션 시작 후 설정된 제한 시간이 초과되면 예외를 발생시킵니다.
      */
     private fun validatePracticeTime(userId: Long) {
         val startTime =
             practiceSessionService.getSessionStartTime(userId)
                 ?: throw NoActiveSessionException()
 
-        val elapsedTimeMs = System.currentTimeMillis() - startTime
+        val elapsedTimeMs = timeProvider.currentTimeMillis() - startTime
 
-        if (elapsedTimeMs >= PRACTICE_TIME_LIMIT_MS) {
+        if (elapsedTimeMs >= config.timeLimitMs) {
             throw PracticeTimeExpiredException()
         }
     }
 
     /**
      * Early Click (너무 일찍 클릭한 경우)을 처리합니다.
-     * -1000ms ~ 0ms 사이인 경우 DB에 기록하고,
+     * earlyClickThresholdMs ~ 0ms 사이인 경우 DB에 기록하고,
      * 그 외에는 기록하지 않습니다.
      */
     private fun handleEarlyClick(
         request: PracticeAttemptRequest,
         practiceLog: PracticeLog,
     ): PracticeAttemptResponse {
-        val shouldRecord = request.userLatencyMs >= EARLY_CLICK_THRESHOLD_MS
+        val shouldRecord = request.userLatencyMs >= config.earlyClickThresholdMs
 
         if (shouldRecord) {
             // -1000ms ~ 0ms 사이: DB에 기록
@@ -251,13 +245,4 @@ class PracticeService(
         }
     }
 
-    /**
-     * SecurityContext에서 현재 로그인한 사용자의 ID를 가져옵니다.
-     */
-    private fun getCurrentUserId(): Long {
-        val authentication =
-            SecurityContextHolder.getContext().authentication
-                ?: throw ResourceNotFoundException("인증 정보를 찾을 수 없습니다")
-        return authentication.principal as Long
-    }
 }

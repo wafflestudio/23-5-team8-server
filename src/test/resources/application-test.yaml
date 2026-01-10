@@ -17,3 +17,12 @@ jwt:
 
 server:
   port: 0 # 랜덤 포트 사용
+
+# 수강신청 연습 세션 설정 (테스트용)
+practice:
+  session:
+    virtual-start-time: "08:28:00"
+    target-time: "08:30:00"
+    time-limit-seconds: 300
+    early-click-threshold-ms: -5000
+    lock-ttl-seconds: 3

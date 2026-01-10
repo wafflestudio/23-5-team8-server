@@ -1,5 +1,6 @@
 package com.wafflestudio.team8server.practice.controller
 
+import com.wafflestudio.team8server.common.auth.LoggedInUserId
 import com.wafflestudio.team8server.common.exception.ErrorResponse
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
@@ -98,7 +99,9 @@ class PracticeController(
     )
     @PostMapping("/start")
     @ResponseStatus(HttpStatus.CREATED)
-    fun startPractice(): PracticeStartResponse = practiceService.startPractice()
+    fun startPractice(
+        @LoggedInUserId userId: Long,
+    ): PracticeStartResponse = practiceService.startPractice(userId)
 
     @Operation(
         summary = "연습 세션 종료",
@@ -166,7 +169,9 @@ class PracticeController(
     )
     @PostMapping("/end")
     @ResponseStatus(HttpStatus.OK)
-    fun endPractice(): PracticeEndResponse = practiceService.endPractice()
+    fun endPractice(
+        @LoggedInUserId userId: Long,
+    ): PracticeEndResponse = practiceService.endPractice(userId)
 
     @Operation(
         summary = "수강신청 연습 시도",
@@ -180,18 +185,17 @@ class PracticeController(
             - 연습 종료 시간: 08:33:00
 
             **주요 로직:**
-            1. 시간 검증: 08:33:00 이후 요청은 실패 처리
-            2. Early Click 처리: 0ms 이하(08:30:00 이전)는 실패 처리
-               - -5000ms ~ 0ms 사이는 DB에 기록
+            1. 시간 검증: 제한 시간 이후 요청은 실패 처리
+            2. Early Click 처리: 0ms 이하(targetTime 이전)는 실패 처리
+               - earlyClickThresholdMs ~ 0ms 사이는 DB에 기록
             3. 로그정규분포 기반 백분위 계산
             4. 등수 산출 및 성공 여부 판정
 
             **파라미터 설명:**
-            - userLatencyMs: 08:30:00 기준 사용자의 요청 도착 지연 시간 (ms)
-              - 음수: 08:30:00 이전 클릭
-              - 양수: 08:30:00 이후 클릭
-              - 예: 100이면 08:30:00.100
-            - currentVirtualTime: 가상 서버 시간 (HH:mm:ss 형식)
+            - userLatencyMs: targetTime 기준 사용자의 요청 도착 지연 시간 (ms)
+              - 음수: targetTime 이전 클릭
+              - 양수: targetTime 이후 클릭
+              - 예: 100이면 targetTime으로부터 100ms 후
             - totalCompetitors: 전체 경쟁자 수
             - capacity: 수강 정원
             - scale: 로그정규분포의 μ (mu) 파라미터
@@ -369,7 +373,6 @@ class PracticeController(
                         {
                           "courseId": 1,
                           "userLatencyMs": 120,
-                          "currentVirtualTime": "08:30:01",
                           "totalCompetitors": 100,
                           "capacity": 40,
                           "scale": 5.0,
@@ -384,6 +387,7 @@ class PracticeController(
     @PostMapping("/attempt")
     @ResponseStatus(HttpStatus.OK)
     fun attemptPractice(
+        @LoggedInUserId userId: Long,
         @Valid @RequestBody request: PracticeAttemptRequest,
-    ): PracticeAttemptResponse = practiceService.attemptPractice(request)
+    ): PracticeAttemptResponse = practiceService.attemptPractice(userId, request)
 }

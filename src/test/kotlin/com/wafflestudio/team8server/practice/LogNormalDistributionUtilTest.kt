@@ -69,7 +69,7 @@ class LogNormalDistributionUtilTest {
 
         val rank = util.calculateRankFromLatency(latencyMs = 150, totalCompetitors = 100)
 
-        // 등수는 1 이상 100 이하여야 함
+        // 등수는 1 이상 totalCompetitors(100) 이하여야 함
         assertTrue(rank >= 1)
         assertTrue(rank <= 100)
     }
