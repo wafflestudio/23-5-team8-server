@@ -12,7 +12,6 @@ data class GoogleUserInfo(
     val email: String?,
     val name: String?,
     val picture: String?,
-    val emailVerified: Boolean?,
 )
 
 @Component
@@ -37,7 +36,6 @@ class GoogleIdTokenVerifier(
             email = jwt.getClaimAsString("email"),
             name = jwt.getClaimAsString("name"),
             picture = jwt.getClaimAsString("picture"),
-            emailVerified = jwt.getClaimAsBoolean("email_verified"),
         )
     }
 
