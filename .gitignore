@@ -48,6 +48,7 @@ out/
 ### AI tool ###
 CLAUDE.md
 .claude
+docs/
 
 # Test logs
 *.log
