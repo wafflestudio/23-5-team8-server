@@ -47,7 +47,9 @@ docker compose down
 3. Active profiles에 "local" 입력 후 적용
 
 ### 4. Swagger UI 접속 방법
-
-애플리케이션을 실행한 후:
+(배포)15.164.49.159
+- Swagger UI: http://15.164.49.159/swagger-ui/index.html
+- OpenAPI JSON: http://15.164.49.159/v3/api-docs
+(로컬)애플리케이션을 실행한 후:
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
 - OpenAPI JSON: http://localhost:8080/v3/api-docs
