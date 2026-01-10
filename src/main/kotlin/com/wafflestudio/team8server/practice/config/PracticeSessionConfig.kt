@@ -1,7 +1,6 @@
 package com.wafflestudio.team8server.practice.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.context.annotation.Configuration
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -11,7 +10,6 @@ import java.time.format.DateTimeFormatter
  * application.yml에서 설정을 주입받아 사용합니다.
  * 설정되지 않은 경우 기본값이 사용됩니다.
  */
-@Configuration
 @ConfigurationProperties(prefix = "practice.session")
 class PracticeSessionConfig {
     /**

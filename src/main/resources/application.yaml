@@ -29,12 +29,8 @@ practice:
     early-click-recording-window-ms: 5000 # Early click 기록 범위 (ms) - 이 값 이내로 일찍 클릭한 경우 DB에 기록
     lock-ttl-seconds: 10                 # 분산 락 TTL (초) - 서버 크래시 시 안전장치
 
-  # 로그정규분포 파라미터 설정 (교과분류별)
+  # 로그정규분포 파라미터 설정
   distribution:
-    default:                             # 기본값 (분류 매핑 안 된 경우)
-      scale: 5.0                         # μ (mu) - 평균 반응시간 기준
-      shape: 0.5                         # σ (sigma) - 분포 퍼짐 정도
-    classifications:
-      "교양":                            # 교양 과목 - 경쟁 치열
-        scale: 4.5                       # 더 낮은 scale = 더 빠른 반응시간 요구
-        shape: 0.4
+    default:
+      scale: 5.0                         # μ (mu) - 로그정규분포의 scale 파라미터
+      shape: 0.5                         # σ (sigma) - 로그정규분포의 shape 파라미터
