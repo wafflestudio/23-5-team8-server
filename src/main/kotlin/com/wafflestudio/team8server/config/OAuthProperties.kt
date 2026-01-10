@@ -13,6 +13,7 @@ data class OAuthProperties(
         val tokenUri: String,
         val userInfoUri: String,
     )
+
     data class Google(
         val clientId: String,
         val clientSecret: String,

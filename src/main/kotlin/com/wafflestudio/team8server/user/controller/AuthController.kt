@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import kotlin.math.E
 
 @Tag(name = "인증 API", description = "회원가입, 로그인, 로그아웃 기능을 제공합니다")
 @RestController
