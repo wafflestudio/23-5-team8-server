@@ -6,6 +6,7 @@ import com.wafflestudio.team8server.common.exception.PracticeTimeExpiredExceptio
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.common.time.TimeProvider
 import com.wafflestudio.team8server.course.repository.CourseRepository
+import com.wafflestudio.team8server.practice.config.PracticeDistributionConfig
 import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
@@ -28,7 +29,8 @@ class PracticeService(
     private val userRepository: UserRepository,
     private val courseRepository: CourseRepository,
     private val practiceSessionService: PracticeSessionService,
-    private val config: PracticeSessionConfig,
+    private val sessionConfig: PracticeSessionConfig,
+    private val distributionConfig: PracticeDistributionConfig,
     private val timeProvider: TimeProvider,
 ) {
     /**
@@ -67,10 +69,10 @@ class PracticeService(
 
             return PracticeStartResponse(
                 practiceLogId = savedLog.id!!,
-                virtualStartTime = config.virtualStartTime,
-                targetTime = config.targetTime,
-                timeLimit = config.timeLimit,
-                message = "연습 세션이 시작되었습니다. 가상 시계가 ${config.virtualStartTime} 로 세팅되었습니다.",
+                virtualStartTime = sessionConfig.virtualStartTime,
+                targetTime = sessionConfig.targetTime,
+                timeLimit = sessionConfig.timeLimit,
+                message = "연습 세션이 시작되었습니다. 가상 시계가 ${sessionConfig.virtualStartTime} 로 세팅되었습니다.",
             )
         } finally {
             // 6. 락 해제
@@ -139,23 +141,26 @@ class PracticeService(
             )
         }
 
-        // 6. 로그정규분포 계산
+        // 6. 교과분류 기반 분포 파라미터 결정
+        val distributionParams = distributionConfig.getParamsForClassification(course.classification)
+
+        // 7. 로그정규분포 계산
         val distributionUtil =
             LogNormalDistributionUtil(
-                scale = request.scale,
-                shape = request.shape,
+                scale = distributionParams.scale,
+                shape = distributionParams.shape,
             )
 
-        // 7. 백분위(Percentile) 계산
+        // 8. 백분위(Percentile) 계산
         val percentile = distributionUtil.calculatePercentile(request.userLatencyMs)
 
-        // 8. 등수(Rank) 산출
+        // 9. 등수(Rank) 산출
         val rank = distributionUtil.calculateRank(percentile, request.totalCompetitors)
 
-        // 9. 성공 여부 판정
+        // 10. 성공 여부 판정
         val isSuccess = distributionUtil.isSuccessful(rank, request.capacity)
 
-        // 10. PracticeDetail 저장
+        // 11. PracticeDetail 저장
         val practiceDetail =
             PracticeDetail(
                 practiceLog = practiceLog,
@@ -166,7 +171,7 @@ class PracticeService(
             )
         practiceDetailRepository.save(practiceDetail)
 
-        // 11. 응답 반환
+        // 12. 응답 반환
         val message =
             if (isSuccess) {
                 "수강신청에 성공했습니다! (${rank}등 / ${request.totalCompetitors}명)"
@@ -195,7 +200,7 @@ class PracticeService(
 
         val elapsedTimeMs = timeProvider.currentTimeMillis() - startTime
 
-        if (elapsedTimeMs >= config.timeLimitMs) {
+        if (elapsedTimeMs >= sessionConfig.timeLimitMs) {
             throw PracticeTimeExpiredException()
         }
     }
@@ -214,7 +219,7 @@ class PracticeService(
         val earlyClickAmount = kotlin.math.abs(request.userLatencyMs)
 
         // 기록 범위 내인지 확인 (예: 1500ms <= 5000ms → 기록, 6000ms <= 5000ms → 기록 안 함)
-        val shouldRecord = earlyClickAmount <= config.earlyClickRecordingWindowMs
+        val shouldRecord = earlyClickAmount <= sessionConfig.earlyClickRecordingWindowMs
 
         if (shouldRecord) {
             // earlyClickRecordingWindowMs 범위 내: DB에 기록

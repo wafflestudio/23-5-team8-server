@@ -14,8 +14,4 @@ data class PracticeAttemptRequest(
     @field:NotNull(message = "수강 정원은 필수입니다")
     @field:Min(value = 1, message = "수강 정원은 1 이상이어야 합니다")
     val capacity: Int,
-    @field:NotNull(message = "로그정규분포 scale 파라미터는 필수입니다")
-    val scale: Double,
-    @field:NotNull(message = "로그정규분포 shape 파라미터는 필수입니다")
-    val shape: Double,
 )

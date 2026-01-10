@@ -18,7 +18,7 @@ jwt:
 server:
   port: 0 # 랜덤 포트 사용
 
-# 수강신청 연습 세션 설정 (테스트용)
+# 수강신청 연습 설정 (테스트용)
 practice:
   session:
     virtual-start-time: "08:28:00"
@@ -26,3 +26,11 @@ practice:
     time-limit-seconds: 300
     early-click-recording-window-ms: 5000  # Early click 기록 범위 (ms)
     lock-ttl-seconds: 10  # 서버 크래시 시 안전장치
+  distribution:
+    default:
+      scale: 5.0
+      shape: 0.5
+    classifications:
+      "교양":
+        scale: 4.5
+        shape: 0.4

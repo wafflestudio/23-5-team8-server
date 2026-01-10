@@ -186,20 +186,23 @@ class PracticeController(
 
             **주요 로직:**
             1. 시간 검증: 제한 시간 이후 요청은 실패 처리
-            2. Early Click 처리: 0ms 이하(targetTime 이전)는 실패 처리
-               - earlyClickThresholdMs ~ 0ms 사이는 DB에 기록
-            3. 로그정규분포 기반 백분위 계산
-            4. 등수 산출 및 성공 여부 판정
+            2. Course 조회 및 교과분류 확인
+            3. 교과분류 기반 로그정규분포 파라미터 결정
+               - 교양: 더 빡센 기준 (낮은 scale)
+               - 기타: 기본값 사용
+            4. Early Click 처리: 0ms 이하(targetTime 이전)는 실패 처리
+               - earlyClickRecordingWindowMs 범위 내는 DB에 기록
+            5. 로그정규분포 기반 백분위 계산
+            6. 등수 산출 및 성공 여부 판정
 
             **파라미터 설명:**
+            - courseId: 연습할 강의 ID (교과분류 정보를 포함)
             - userLatencyMs: targetTime 기준 사용자의 요청 도착 지연 시간 (ms)
               - 음수: targetTime 이전 클릭
               - 양수: targetTime 이후 클릭
               - 예: 100이면 targetTime으로부터 100ms 후
             - totalCompetitors: 전체 경쟁자 수
             - capacity: 수강 정원
-            - scale: 로그정규분포의 μ (mu) 파라미터
-            - shape: 로그정규분포의 σ (sigma) 파라미터
             """,
         security = [SecurityRequirement(name = "Bearer Authentication")],
     )
@@ -374,9 +377,7 @@ class PracticeController(
                           "courseId": 1,
                           "userLatencyMs": 120,
                           "totalCompetitors": 100,
-                          "capacity": 40,
-                          "scale": 5.0,
-                          "shape": 0.5
+                          "capacity": 40
                         }
                         """,
                     ),

@@ -215,8 +215,6 @@ class PracticeControllerTest
                     userLatencyMs = 100,
                     totalCompetitors = 100,
                     capacity = 40,
-                    scale = 5.0,
-                    shape = 0.5,
                 )
 
             mockMvc
@@ -249,8 +247,6 @@ class PracticeControllerTest
                     userLatencyMs = 100,
                     totalCompetitors = 100,
                     capacity = 40,
-                    scale = 5.0,
-                    shape = 0.5,
                 )
 
             mockMvc
@@ -280,8 +276,6 @@ class PracticeControllerTest
                     userLatencyMs = -1500, // -1.5초 (기록 범위 내)
                     totalCompetitors = 100,
                     capacity = 40,
-                    scale = 5.0,
-                    shape = 0.5,
                 )
 
             mockMvc
@@ -316,8 +310,6 @@ class PracticeControllerTest
                     userLatencyMs = -6000, // -6초 (기록 범위 밖)
                     totalCompetitors = 100,
                     capacity = 40,
-                    scale = 5.0,
-                    shape = 0.5,
                 )
 
             mockMvc
@@ -349,8 +341,6 @@ class PracticeControllerTest
                     userLatencyMs = 50, // 매우 빠른 반응 시간
                     totalCompetitors = 100,
                     capacity = 80, // 높은 정원
-                    scale = 5.0,
-                    shape = 0.5,
                 )
 
             mockMvc
@@ -384,8 +374,6 @@ class PracticeControllerTest
                     userLatencyMs = 5000, // 느린 반응 시간
                     totalCompetitors = 100,
                     capacity = 10, // 낮은 정원
-                    scale = 5.0,
-                    shape = 0.5,
                 )
 
             mockMvc
@@ -420,8 +408,6 @@ class PracticeControllerTest
                     userLatencyMs = 100,
                     totalCompetitors = 100,
                     capacity = 40,
-                    scale = 5.0,
-                    shape = 0.5,
                 )
 
             mockMvc.perform(
@@ -438,8 +424,6 @@ class PracticeControllerTest
                     userLatencyMs = 200,
                     totalCompetitors = 100,
                     capacity = 40,
-                    scale = 5.0,
-                    shape = 0.5,
                 )
 
             mockMvc
@@ -476,8 +460,6 @@ class PracticeControllerTest
                     userLatencyMs = 100,
                     totalCompetitors = 0, // 유효하지 않은 값
                     capacity = 40,
-                    scale = 5.0,
-                    shape = 0.5,
                 )
 
             mockMvc
