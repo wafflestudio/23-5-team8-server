@@ -3,7 +3,10 @@ package com.wafflestudio.team8server.user.service.social.google
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
 import com.wafflestudio.team8server.config.OAuthProperties
-import org.springframework.http.*
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
+import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
@@ -27,18 +30,20 @@ class GoogleOAuthClient(
 
         val google = props.google
 
-        val headers = HttpHeaders().apply {
-            contentType = MediaType.APPLICATION_FORM_URLENCODED
-            accept = listOf(MediaType.APPLICATION_JSON)
-        }
+        val headers =
+            HttpHeaders().apply {
+                contentType = MediaType.APPLICATION_FORM_URLENCODED
+                accept = listOf(MediaType.APPLICATION_JSON)
+            }
 
-        val form: MultiValueMap<String, String> = LinkedMultiValueMap<String, String>().apply {
-            add("grant_type", "authorization_code")
-            add("client_id", google.clientId)
-            add("client_secret", google.clientSecret)
-            add("redirect_uri", redirectUri)
-            add("code", code)
-        }
+        val form: MultiValueMap<String, String> =
+            LinkedMultiValueMap<String, String>().apply {
+                add("grant_type", "authorization_code")
+                add("client_id", google.clientId)
+                add("client_secret", google.clientSecret)
+                add("redirect_uri", redirectUri)
+                add("code", code)
+            }
 
         val request = HttpEntity(form, headers)
 

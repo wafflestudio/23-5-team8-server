@@ -8,7 +8,6 @@ data class SocialLoginRequest(
     @field:NotBlank(message = "authorization code는 필수입니다")
     @field:Schema(description = "OAuth Authorization Code", example = "4/0AeaYSHA...", required = true)
     val code: String,
-
     @field:Schema(description = "OAuth Redirect URI", example = "https://example.com/oauth/callback", required = false, nullable = true)
     val redirectUri: String? = null,
 )

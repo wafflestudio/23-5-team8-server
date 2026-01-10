@@ -1,6 +1,5 @@
 package com.wafflestudio.team8server.user.service
 
-import com.wafflestudio.team8server.common.exception.BusinessException
 import com.wafflestudio.team8server.common.exception.SocialEmailRequiredException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
 import com.wafflestudio.team8server.common.extension.ensureNotNull
@@ -15,7 +14,6 @@ import com.wafflestudio.team8server.user.service.social.SocialProvider
 import com.wafflestudio.team8server.user.service.social.google.GoogleIdTokenVerifier
 import com.wafflestudio.team8server.user.service.social.google.GoogleOAuthClient
 import com.wafflestudio.team8server.user.service.social.kakao.KakaoOAuthClient
-import com.wafflestudio.team8server.user.service.social.kakao.KakaoUserInfo
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -29,7 +27,10 @@ class SocialAuthService(
     private val googleIdTokenVerifier: GoogleIdTokenVerifier,
 ) {
     @Transactional
-    fun kakaoLogin(code: String, redirectUri: String?): LoginResponse {
+    fun kakaoLogin(
+        code: String,
+        redirectUri: String?,
+    ): LoginResponse {
         val kakaoUserInfo =
             try {
                 kakaoOAuthClient.getUserInfo(code, redirectUri)
@@ -54,7 +55,8 @@ class SocialAuthService(
         }
 
         // 신규 회원인 경우 User 생성 및 저장
-        val user = User(
+        val user =
+            User(
                 nickname = kakaoUserInfo.nickname ?: "kakaouser",
                 profileImageUrl = kakaoUserInfo.profileImageUrl,
             )
@@ -78,7 +80,10 @@ class SocialAuthService(
     }
 
     @Transactional
-    fun googleLogin(code: String, redirectUri: String?): LoginResponse {
+    fun googleLogin(
+        code: String,
+        redirectUri: String?,
+    ): LoginResponse {
         val idToken =
             try {
                 googleOAuthClient.exchangeCodeForIdToken(code, redirectUri)

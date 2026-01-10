@@ -6,6 +6,13 @@ import org.springframework.stereotype.Repository
 
 @Repository
 interface SocialCredentialRepository : JpaRepository<SocialCredential, Long> {
-    fun findByProviderAndSocialId(provider: String, socialId: String): SocialCredential?
-    fun existsByProviderAndSocialId(provider: String, socialId: String): Boolean
+    fun findByProviderAndSocialId(
+        provider: String,
+        socialId: String,
+    ): SocialCredential?
+
+    fun existsByProviderAndSocialId(
+        provider: String,
+        socialId: String,
+    ): Boolean
 }
