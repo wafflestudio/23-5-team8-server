@@ -1,8 +1,33 @@
 spring:
+  config:
+    activate:
+      on-profile: local
   datasource:
-    username: user
-    password: change-me
+    url: jdbc:mysql://localhost:3306/team8?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=utf8
+    username: change-me # 변경
+    password: change-me # 변경
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
 
 jwt:
-  secret: change-me
-  expiration-in-ms: change-me (recommend over 8640000)
+  secret: change-me (e.g. local-secret-key-must-be-very-long-for-security)
+  expiration-in-ms: change-me (recommend over 3600000)
+
+server:
+  port: 8080
+
+oauth:
+  kakao:
+    client-id: change-me
+    client-secret: change-me
+
+  google:
+    client-id: change-me
+    client-secret: change-me

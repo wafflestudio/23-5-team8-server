@@ -1,39 +1,24 @@
 spring:
+  application:
+    name: team8-backend
   datasource:
-    url: jdbc:mysql://localhost:3306/team8?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=utf8
-    username: ${DB_USERNAME:user}
-    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
-
   jpa:
-    hibernate:
-      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true
-
   flyway:
     enabled: true
-
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-
-server:
-  port: ${SERVER_PORT:8080}
-
 oauth:
   kakao:
-    client-id: ${KAKAO_CLIENT_ID}
-    client-secret: ${KAKAO_CLIENT_SECRET}
+    client-id: ${KAKAO_CLIENT_ID:}
+    client-secret: ${KAKAO_CLIENT_SECRET:}
     token-uri: https://kauth.kakao.com/oauth/token
     user-info-uri: https://kapi.kakao.com/v2/user/me
 
   google:
-    client-id: ${GOOGLE_CLIENT_ID}
-    client-secret: ${GOOGLE_CLIENT_SECRET}
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
     token-uri: https://oauth2.googleapis.com/token
     issuer: https://accounts.google.com
-    jwk-ser-uri: https://www.googleapis.com/oauth2/v3/certs
+    jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
