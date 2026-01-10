@@ -10,7 +10,7 @@ spring:
 
 jwt:
   secret: test-secret-key-for-testing-at-least-256-bits-long-hs256-algorithm
-  expiration-in-ms: 3600000
+  expiration-in-ms: 36000000
 
 # 수강신청 연습 설정 (테스트용)
 practice:
@@ -28,5 +28,3 @@ practice:
       "교양":
         scale: 4.5
         shape: 0.4
-
-  expiration-in-ms: 36000000
