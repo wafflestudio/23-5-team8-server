@@ -1,6 +1,5 @@
 package com.wafflestudio.team8server.user.service
 
-import com.wafflestudio.team8server.common.exception.SocialEmailRequiredException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
 import com.wafflestudio.team8server.common.extension.ensureNotNull
 import com.wafflestudio.team8server.user.JwtTokenProvider
@@ -38,8 +37,6 @@ class SocialAuthService(
                 throw UnauthorizedException("카카오 인증에 실패했습니다")
             }
 
-        val email =
-            kakaoUserInfo.email ?: throw SocialEmailRequiredException()
 
         // 기존 SocialCredential 조회
         val provider = SocialProvider.KAKAO.dbValue()
@@ -47,7 +44,7 @@ class SocialAuthService(
 
         val existingCredential = socialCredentialRepository.findByProviderAndSocialId(provider, socialId)
         if (existingCredential != null) {
-            val accessToken = jwtTokenProvider.createToken(existingCredential.user.id.ensureNotNull(), email)
+            val accessToken = jwtTokenProvider.createToken(existingCredential.user.id.ensureNotNull())
             return LoginResponse(
                 accessToken = accessToken,
                 user = UserDto.from(existingCredential.user),
@@ -72,7 +69,7 @@ class SocialAuthService(
         socialCredentialRepository.save(credential)
 
         // JWT 발급 및 응답
-        val accessToken = jwtTokenProvider.createToken(savedUser.id.ensureNotNull(), email)
+        val accessToken = jwtTokenProvider.createToken(savedUser.id.ensureNotNull())
         return LoginResponse(
             accessToken = accessToken,
             user = UserDto.from(savedUser),
@@ -98,15 +95,15 @@ class SocialAuthService(
                 throw UnauthorizedException("구글 인증에 실패했습니다")
             }
 
-        val email =
-            googleUserInfo.email ?: throw SocialEmailRequiredException()
+        //val email =
+        //    googleUserInfo.email ?: throw SocialEmailRequiredException()
 
         val provider = SocialProvider.GOOGLE.dbValue()
         val socialId = googleUserInfo.sub
 
         val existingCredential = socialCredentialRepository.findByProviderAndSocialId(provider, socialId)
         if (existingCredential != null) {
-            val accessToken = jwtTokenProvider.createToken(existingCredential.user.id.ensureNotNull(), email)
+            val accessToken = jwtTokenProvider.createToken(existingCredential.user.id.ensureNotNull())
             return LoginResponse(
                 accessToken = accessToken,
                 user = UserDto.from(existingCredential.user),
@@ -128,7 +125,7 @@ class SocialAuthService(
             )
         socialCredentialRepository.save(credential)
 
-        val accessToken = jwtTokenProvider.createToken(savedUser.id.ensureNotNull(), email)
+        val accessToken = jwtTokenProvider.createToken(savedUser.id.ensureNotNull())
         return LoginResponse(
             accessToken = accessToken,
             user = UserDto.from(savedUser),

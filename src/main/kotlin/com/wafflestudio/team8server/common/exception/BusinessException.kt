@@ -29,10 +29,3 @@ class UnauthorizedException(
         message = message,
         errorCode = "UNAUTHORIZED",
     )
-
-// 소셜 로그인 시 이메일 누락
-class SocialEmailRequiredException :
-    BusinessException(
-        message = "소셜 로그인에서 이메일 제공이 필요합니다",
-        errorCode = "SOCIAL_EMAIL_REQUIRED",
-    )
