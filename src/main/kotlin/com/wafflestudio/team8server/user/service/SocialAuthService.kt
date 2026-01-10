@@ -10,7 +10,7 @@ import com.wafflestudio.team8server.user.model.SocialCredential
 import com.wafflestudio.team8server.user.model.User
 import com.wafflestudio.team8server.user.repository.SocialCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
-import com.wafflestudio.team8server.user.service.social.SocialProvider
+import com.wafflestudio.team8server.user.enum.SocialProvider
 import com.wafflestudio.team8server.user.service.social.google.GoogleIdTokenVerifier
 import com.wafflestudio.team8server.user.service.social.google.GoogleOAuthClient
 import com.wafflestudio.team8server.user.service.social.kakao.KakaoOAuthClient

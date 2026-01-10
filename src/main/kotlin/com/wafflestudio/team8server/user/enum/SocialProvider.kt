@@ -1,4 +1,4 @@
-package com.wafflestudio.team8server.user.service.social
+package com.wafflestudio.team8server.user.enum
 
 enum class SocialProvider {
     KAKAO,
