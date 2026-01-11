@@ -26,6 +26,18 @@ class PracticeDetail(
     val reactionTime: Int,
     @Column(name = "early_click_diff", nullable = true)
     val earlyClickDiff: Int? = null,
+    @Column(name = "user_rank", nullable = true)
+    val rank: Int? = null,
+    @Column(name = "percentile", nullable = true)
+    val percentile: Double? = null,
+    @Column(name = "capacity", nullable = false)
+    val capacity: Int,
+    @Column(name = "total_competitors", nullable = false)
+    val totalCompetitors: Int,
+    @Column(name = "distribution_scale", nullable = false)
+    val distributionScale: Double,
+    @Column(name = "distribution_shape", nullable = false)
+    val distributionShape: Double,
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,

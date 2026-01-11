@@ -4,13 +4,16 @@ import com.wafflestudio.team8server.common.exception.ActiveSessionExistsExceptio
 import com.wafflestudio.team8server.common.exception.NoActiveSessionException
 import com.wafflestudio.team8server.common.exception.PracticeTimeExpiredException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
+import com.wafflestudio.team8server.common.exception.UnauthorizedException
 import com.wafflestudio.team8server.common.time.TimeProvider
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.practice.config.PracticeDistributionConfig
 import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
+import com.wafflestudio.team8server.practice.dto.PracticeAttemptResult
 import com.wafflestudio.team8server.practice.dto.PracticeEndResponse
+import com.wafflestudio.team8server.practice.dto.PracticeResultResponse
 import com.wafflestudio.team8server.practice.dto.PracticeStartResponse
 import com.wafflestudio.team8server.practice.model.PracticeDetail
 import com.wafflestudio.team8server.practice.model.PracticeLog
@@ -41,7 +44,6 @@ class PracticeService(
      */
     @Transactional
     fun startPractice(userId: Long): PracticeStartResponse {
-
         // 1. 분산 락 획득
         val lockAcquired = practiceSessionService.acquireLock(userId)
         if (!lockAcquired) {
@@ -86,7 +88,6 @@ class PracticeService(
      */
     @Transactional(readOnly = true)
     fun endPractice(userId: Long): PracticeEndResponse {
-
         // 1. 활성 세션 확인
         val practiceLogId =
             practiceSessionService.getActiveSession(userId)
@@ -113,7 +114,6 @@ class PracticeService(
         userId: Long,
         request: PracticeAttemptRequest,
     ): PracticeAttemptResponse {
-
         // 1. 활성 세션 확인
         val practiceLogId =
             practiceSessionService.getActiveSession(userId)
@@ -160,7 +160,7 @@ class PracticeService(
         // 10. 성공 여부 판정
         val isSuccess = distributionUtil.isSuccessful(rank, request.capacity)
 
-        // 11. PracticeDetail 저장
+        // 11. PracticeDetail 저장 (통계 정보 포함)
         val practiceDetail =
             PracticeDetail(
                 practiceLog = practiceLog,
@@ -168,24 +168,26 @@ class PracticeService(
                 isSuccess = isSuccess,
                 reactionTime = request.userLatencyMs,
                 earlyClickDiff = null,
+                rank = rank,
+                percentile = percentile,
+                capacity = request.capacity,
+                totalCompetitors = request.totalCompetitors,
+                distributionScale = distributionParams.scale,
+                distributionShape = distributionParams.shape,
             )
         practiceDetailRepository.save(practiceDetail)
 
-        // 12. 응답 반환
+        // 12. 응답 반환 (간소화)
         val message =
             if (isSuccess) {
-                "수강신청에 성공했습니다! (${rank}등 / ${request.totalCompetitors}명)"
+                "수강신청에 성공했습니다"
             } else {
-                "수강신청에 실패했습니다. (${rank}등 / ${request.totalCompetitors}명, 정원: ${request.capacity}명)"
+                "정원이 초과되었습니다"
             }
 
         return PracticeAttemptResponse(
             isSuccess = isSuccess,
             message = message,
-            rank = rank,
-            percentile = percentile,
-            reactionTime = request.userLatencyMs,
-            earlyClickDiff = null,
         )
     }
 
@@ -218,8 +220,11 @@ class PracticeService(
         // 일찍 클릭한 시간 (양수로 변환)
         val earlyClickAmount = kotlin.math.abs(request.userLatencyMs)
 
-        // 기록 범위 내인지 확인 (예: 1500ms <= 5000ms → 기록, 6000ms <= 5000ms → 기록 안 함)
+        // 기록 범위 내인지 확인 (예: 500ms <= 1000ms → 기록, 2000ms <= 1000ms → 기록 안 함)
         val shouldRecord = earlyClickAmount <= sessionConfig.earlyClickRecordingWindowMs
+
+        // 분포 파라미터 조회
+        val distributionParams = distributionConfig.getParamsForClassification(course.classification)
 
         if (shouldRecord) {
             // earlyClickRecordingWindowMs 범위 내: DB에 기록
@@ -230,32 +235,69 @@ class PracticeService(
                     isSuccess = false,
                     reactionTime = 0, // Early click이므로 reactionTime은 0으로 설정
                     earlyClickDiff = request.userLatencyMs, // 음수 값으로 저장
+                    rank = null,
+                    percentile = null,
+                    capacity = request.capacity,
+                    totalCompetitors = request.totalCompetitors,
+                    distributionScale = distributionParams.scale,
+                    distributionShape = distributionParams.shape,
                 )
             practiceDetailRepository.save(practiceDetail)
-
-            val message = "너무 일찍 클릭했습니다! (${earlyClickAmount}ms 일찍 클릭)"
-
-            return PracticeAttemptResponse(
-                isSuccess = false,
-                message = message,
-                rank = null,
-                percentile = null,
-                reactionTime = 0,
-                earlyClickDiff = request.userLatencyMs,
-            )
-        } else {
-            // earlyClickRecordingWindowMs 범위 밖: DB에 기록하지 않음
-            val message = "너무 일찍 클릭했습니다! (${earlyClickAmount}ms 일찍 클릭)"
-
-            return PracticeAttemptResponse(
-                isSuccess = false,
-                message = message,
-                rank = null,
-                percentile = null,
-                reactionTime = 0,
-                earlyClickDiff = null,
-            )
         }
+
+        // earlyClickRecordingWindowMs 범위와 상관없이 동일한 메시지
+        return PracticeAttemptResponse(
+            isSuccess = false,
+            message = "수강신청 시간이 아닙니다",
+        )
     }
 
+    /**
+     * 연습 세션 결과를 조회합니다.
+     * - practiceLogId로 연습 기록을 조회하고 모든 시도 내역을 반환합니다.
+     * - 사용자는 자신의 연습 기록만 조회할 수 있습니다.
+     */
+    @Transactional(readOnly = true)
+    fun getPracticeResults(
+        userId: Long,
+        practiceLogId: Long,
+    ): PracticeResultResponse {
+        // 1. PracticeLog 조회
+        val practiceLog =
+            practiceLogRepository.findByIdOrNull(practiceLogId)
+                ?: throw ResourceNotFoundException("연습 기록을 찾을 수 없습니다")
+
+        // 2. 본인의 기록인지 확인
+        if (practiceLog.user.id != userId) {
+            throw UnauthorizedException("다른 사용자의 연습 기록에 접근할 수 없습니다")
+        }
+
+        // 3. 모든 시도 내역 조회
+        val details = practiceDetailRepository.findByPracticeLog(practiceLog)
+
+        // 4. 성공 횟수 계산
+        val successCount = details.count { it.isSuccess }
+
+        // 5. DTO 변환
+        val attempts =
+            details.map { detail ->
+                PracticeAttemptResult(
+                    courseId = detail.course?.id,
+                    courseTitle = detail.course?.courseTitle,
+                    isSuccess = detail.isSuccess,
+                    rank = detail.rank,
+                    percentile = detail.percentile,
+                    reactionTime = detail.reactionTime,
+                    earlyClickDiff = detail.earlyClickDiff,
+                )
+            }
+
+        return PracticeResultResponse(
+            practiceLogId = practiceLog.id!!,
+            practiceAt = practiceLog.practiceAt.toString(),
+            totalAttempts = details.size,
+            successCount = successCount,
+            attempts = attempts,
+        )
+    }
 }

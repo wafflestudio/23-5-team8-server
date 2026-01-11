@@ -3,7 +3,6 @@ package com.wafflestudio.team8server.practice
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.wafflestudio.team8server.TestcontainersConfiguration
 import com.wafflestudio.team8server.common.time.MockTimeProvider
-import com.wafflestudio.team8server.common.time.TimeProvider
 import com.wafflestudio.team8server.course.model.Course
 import com.wafflestudio.team8server.course.model.Semester
 import com.wafflestudio.team8server.course.repository.CourseRepository
@@ -24,12 +23,12 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.http.MediaType
+import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.web.context.WebApplicationContext
 
@@ -260,7 +259,7 @@ class PracticeControllerTest
         }
 
         @Test
-        @DisplayName("Early click (-5000ms ~ 0ms) - DB에 기록됨")
+        @DisplayName("Early click (-1000ms ~ 0ms) - DB에 기록됨")
         fun `attempt practice with early click within threshold records to DB`() {
             val token = signupAndGetToken()
 
@@ -273,7 +272,7 @@ class PracticeControllerTest
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = -1500, // -1.5초 (기록 범위 내)
+                    userLatencyMs = -500, // -0.5초 (기록 범위 내)
                     totalCompetitors = 100,
                     capacity = 40,
                 )
@@ -286,15 +285,11 @@ class PracticeControllerTest
                         .content(objectMapper.writeValueAsString(request)),
                 ).andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.message").exists())
-                .andExpect(jsonPath("$.rank").isEmpty)
-                .andExpect(jsonPath("$.percentile").isEmpty)
-                .andExpect(jsonPath("$.reactionTime").value(0))
-                .andExpect(jsonPath("$.earlyClickDiff").value(-1500))
+                .andExpect(jsonPath("$.message").value("수강신청 시간이 아닙니다"))
         }
 
         @Test
-        @DisplayName("Early click (< -5000ms) - DB에 기록 안 됨")
+        @DisplayName("Early click (< -1000ms) - DB에 기록 안 됨")
         fun `attempt practice with early click outside threshold does not record to DB`() {
             val token = signupAndGetToken()
 
@@ -307,7 +302,7 @@ class PracticeControllerTest
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = -6000, // -6초 (기록 범위 밖)
+                    userLatencyMs = -2000, // -2초 (기록 범위 밖)
                     totalCompetitors = 100,
                     capacity = 40,
                 )
@@ -320,8 +315,7 @@ class PracticeControllerTest
                         .content(objectMapper.writeValueAsString(request)),
                 ).andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.message").exists())
-                .andExpect(jsonPath("$.earlyClickDiff").isEmpty)
+                .andExpect(jsonPath("$.message").value("수강신청 시간이 아닙니다"))
         }
 
         @Test
@@ -351,10 +345,7 @@ class PracticeControllerTest
                         .content(objectMapper.writeValueAsString(request)),
                 ).andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.rank").isNumber)
-                .andExpect(jsonPath("$.percentile").isNumber)
-                .andExpect(jsonPath("$.reactionTime").value(50))
-                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.message").value("수강신청에 성공했습니다"))
         }
 
         @Test
@@ -384,10 +375,7 @@ class PracticeControllerTest
                         .content(objectMapper.writeValueAsString(request)),
                 ).andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.rank").isNumber)
-                .andExpect(jsonPath("$.percentile").isNumber)
-                .andExpect(jsonPath("$.reactionTime").value(5000))
-                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.message").value("정원이 초과되었습니다"))
         }
 
         @Test

@@ -5,6 +5,7 @@ import com.wafflestudio.team8server.common.exception.ErrorResponse
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
 import com.wafflestudio.team8server.practice.dto.PracticeEndResponse
+import com.wafflestudio.team8server.practice.dto.PracticeResultResponse
 import com.wafflestudio.team8server.practice.dto.PracticeStartResponse
 import com.wafflestudio.team8server.practice.service.PracticeService
 import io.swagger.v3.oas.annotations.Operation
@@ -17,6 +18,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -222,11 +225,7 @@ class PracticeController(
                                     """
                                 {
                                   "isSuccess": true,
-                                  "message": "수강신청에 성공했습니다! (5등 / 100명)",
-                                  "rank": 5,
-                                  "percentile": 0.05,
-                                  "reactionTime": 120,
-                                  "earlyClickDiff": null
+                                  "message": "수강신청에 성공했습니다"
                                 }
                                 """,
                             ),
@@ -237,11 +236,7 @@ class PracticeController(
                                     """
                                 {
                                   "isSuccess": false,
-                                  "message": "수강신청에 실패했습니다. (45등 / 100명, 정원: 40명)",
-                                  "rank": 45,
-                                  "percentile": 0.45,
-                                  "reactionTime": 500,
-                                  "earlyClickDiff": null
+                                  "message": "정원이 초과되었습니다"
                                 }
                                 """,
                             ),
@@ -252,11 +247,7 @@ class PracticeController(
                                     """
                                 {
                                   "isSuccess": false,
-                                  "message": "너무 일찍 클릭했습니다! (1500ms 일찍 클릭)",
-                                  "rank": null,
-                                  "percentile": null,
-                                  "reactionTime": 0,
-                                  "earlyClickDiff": -1500
+                                  "message": "수강신청 시간이 아닙니다"
                                 }
                                 """,
                             ),
@@ -280,7 +271,7 @@ class PracticeController(
                                   "timestamp": "2026-01-08T12:00:00",
                                   "status": 400,
                                   "error": "Bad Request",
-                                  "message": "연습 시간이 종료되었습니다",
+                                  "message": "수강신청 시간이 아닙니다",
                                   "errorCode": "PRACTICE_TIME_EXPIRED",
                                   "validationErrors": null
                                 }
@@ -391,4 +382,132 @@ class PracticeController(
         @LoggedInUserId userId: Long,
         @Valid @RequestBody request: PracticeAttemptRequest,
     ): PracticeAttemptResponse = practiceService.attemptPractice(userId, request)
+
+    @Operation(
+        summary = "연습 세션 결과 조회",
+        description =
+            """
+            특정 연습 세션의 결과를 조회합니다.
+
+            - 본인의 연습 기록만 조회할 수 있습니다.
+            - 모든 시도 내역과 통계 정보를 반환합니다.
+            - 마이페이지나 세션 종료 후 결과 확인에 사용됩니다.
+            """,
+        security = [SecurityRequirement(name = "Bearer Authentication")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "결과 조회 성공",
+                content = [
+                    Content(
+                        schema = Schema(implementation = PracticeResultResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "result-example",
+                                summary = "결과 조회 예시",
+                                value =
+                                    """
+                                {
+                                  "practiceLogId": 123,
+                                  "practiceAt": "2026-01-11T14:30:00",
+                                  "totalAttempts": 5,
+                                  "successCount": 2,
+                                  "attempts": [
+                                    {
+                                      "courseId": 1,
+                                      "courseTitle": "자료구조",
+                                      "isSuccess": true,
+                                      "rank": 15,
+                                      "percentile": 0.15,
+                                      "reactionTime": 120,
+                                      "earlyClickDiff": null
+                                    },
+                                    {
+                                      "courseId": 2,
+                                      "courseTitle": "알고리즘",
+                                      "isSuccess": false,
+                                      "rank": 55,
+                                      "percentile": 0.55,
+                                      "reactionTime": 500,
+                                      "earlyClickDiff": null
+                                    },
+                                    {
+                                      "courseId": 3,
+                                      "courseTitle": "운영체제",
+                                      "isSuccess": false,
+                                      "rank": null,
+                                      "percentile": null,
+                                      "reactionTime": 0,
+                                      "earlyClickDiff": -1500
+                                    }
+                                  ]
+                                }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "다른 사용자의 기록 접근 시도",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "unauthorized",
+                                summary = "권한 없음",
+                                value =
+                                    """
+                                {
+                                  "timestamp": "2026-01-11T12:00:00",
+                                  "status": 401,
+                                  "error": "UNAUTHORIZED",
+                                  "message": "다른 사용자의 연습 기록에 접근할 수 없습니다",
+                                  "errorCode": "UNAUTHORIZED",
+                                  "validationErrors": null
+                                }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "연습 기록을 찾을 수 없음",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "not-found",
+                                summary = "기록 없음",
+                                value =
+                                    """
+                                {
+                                  "timestamp": "2026-01-11T12:00:00",
+                                  "status": 404,
+                                  "error": "Not Found",
+                                  "message": "연습 기록을 찾을 수 없습니다",
+                                  "errorCode": "RESOURCE_NOT_FOUND",
+                                  "validationErrors": null
+                                }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    @GetMapping("/results/{practiceLogId}")
+    @ResponseStatus(HttpStatus.OK)
+    fun getPracticeResults(
+        @LoggedInUserId userId: Long,
+        @PathVariable practiceLogId: Long,
+    ): PracticeResultResponse = practiceService.getPracticeResults(userId, practiceLogId)
 }

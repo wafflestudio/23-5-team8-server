@@ -19,8 +19,7 @@ class LoggedInUserIdResolver : HandlerMethodArgumentResolver {
     /**
      * @LoggedInUserId 어노테이션이 붙은 파라미터를 지원합니다.
      */
-    override fun supportsParameter(parameter: MethodParameter): Boolean =
-        parameter.hasParameterAnnotation(LoggedInUserId::class.java)
+    override fun supportsParameter(parameter: MethodParameter): Boolean = parameter.hasParameterAnnotation(LoggedInUserId::class.java)
 
     /**
      * SecurityContext에서 현재 로그인한 사용자의 ID를 가져옵니다.

@@ -33,10 +33,10 @@ class PracticeSessionConfig {
     /**
      * Early click 기록 범위 (밀리초)
      * 이 값 이내로 일찍 클릭한 경우 DB에 기록됩니다.
-     * 예: 5000ms이면 targetTime보다 5초 이내로 일찍 클릭한 경우 기록
-     * 기본값: 5000ms (5초)
+     * 예: 1000ms이면 targetTime보다 1초 이내로 일찍 클릭한 경우 기록
+     * 기본값: 1000ms (1초)
      */
-    var earlyClickRecordingWindowMs: Int = 5000
+    var earlyClickRecordingWindowMs: Int = 1000
 
     /**
      * 분산 락 TTL (초 단위)

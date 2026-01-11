@@ -26,7 +26,7 @@ practice:
     virtual-start-time: "08:28:00"      # 연습 시작 시각
     target-time: "08:30:00"              # 수강신청 오픈 시각
     time-limit-seconds: 300              # 연습 제한 시간 (초)
-    early-click-recording-window-ms: 5000 # Early click 기록 범위 (ms) - 이 값 이내로 일찍 클릭한 경우 DB에 기록
+    early-click-recording-window-ms: 1000 # Early click 기록 범위 (ms) - 이 값 이내로 일찍 클릭한 경우 DB에 기록
     lock-ttl-seconds: 10                 # 분산 락 TTL (초) - 서버 크래시 시 안전장치
 
   # 로그정규분포 파라미터 설정

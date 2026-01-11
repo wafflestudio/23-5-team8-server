@@ -32,7 +32,7 @@ class UnauthorizedException(
 
 // 연습 시간 종료
 class PracticeTimeExpiredException(
-    message: String = "연습 시간이 종료되었습니다",
+    message: String = "수강신청 시간이 아닙니다",
 ) : BusinessException(
         message = message,
         errorCode = "PRACTICE_TIME_EXPIRED",

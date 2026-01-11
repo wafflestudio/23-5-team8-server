@@ -23,7 +23,5 @@ class PracticeDistributionConfig {
      * @param classification 교과분류 (nullable)
      * @return 해당 분류의 분포 파라미터
      */
-    fun getParamsForClassification(classification: String?): DistributionParams {
-        return default
-    }
+    fun getParamsForClassification(classification: String?): DistributionParams = default
 }
