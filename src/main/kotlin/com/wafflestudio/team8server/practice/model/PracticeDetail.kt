@@ -24,12 +24,10 @@ class PracticeDetail(
     val isSuccess: Boolean,
     @Column(name = "reaction_time", nullable = false)
     val reactionTime: Int,
-    @Column(name = "early_click_diff", nullable = true)
-    val earlyClickDiff: Int? = null,
-    @Column(name = "user_rank", nullable = true)
-    val rank: Int? = null,
-    @Column(name = "percentile", nullable = true)
-    val percentile: Double? = null,
+    @Column(name = "user_rank", nullable = false)
+    val rank: Int,
+    @Column(name = "percentile", nullable = false)
+    val percentile: Double,
     @Column(name = "capacity", nullable = false)
     val capacity: Int,
     @Column(name = "total_competitors", nullable = false)

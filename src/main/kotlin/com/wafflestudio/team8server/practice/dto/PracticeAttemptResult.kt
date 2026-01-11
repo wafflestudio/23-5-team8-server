@@ -4,8 +4,7 @@ data class PracticeAttemptResult(
     val courseId: Long?,
     val courseTitle: String?,
     val isSuccess: Boolean,
-    val rank: Int?,
-    val percentile: Double?,
+    val rank: Int,
+    val percentile: Double,
     val reactionTime: Int,
-    val earlyClickDiff: Int?,
 )

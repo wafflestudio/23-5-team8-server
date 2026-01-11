@@ -127,47 +127,61 @@ class PracticeService(
             practiceLogRepository.findByIdOrNull(practiceLogId)
                 ?: throw ResourceNotFoundException("연습 세션을 찾을 수 없습니다")
 
-        // 4. Course 존재 여부 검증
-        val course =
-            courseRepository.findByIdOrNull(request.courseId)
-                ?: throw ResourceNotFoundException("강의를 찾을 수 없습니다 (ID: ${request.courseId})")
-
-        // 5. Early Click 처리 (targetTime 기준 0ms 이하)
+        // 4. Early Click 처리 (targetTime 기준 0ms 이하)
         if (request.userLatencyMs <= 0) {
             return handleEarlyClick(
                 request = request,
                 practiceLog = practiceLog,
-                course = course,
             )
         }
 
-        // 6. 교과분류 기반 분포 파라미터 결정
+        // 5. Course 존재 여부 검증
+        val course =
+            courseRepository.findByIdOrNull(request.courseId)
+                ?: throw ResourceNotFoundException("강의를 찾을 수 없습니다 (ID: ${request.courseId})")
+
+        // 6. 중복 시도 체크 (log_id, course_id)
+        val existingDetail = practiceDetailRepository.findByPracticeLogAndCourse(practiceLog, course)
+        if (existingDetail != null) {
+            // 이미 시도한 과목
+            val message =
+                if (existingDetail.isSuccess) {
+                    "이미 수강신청된 강의입니다"
+                } else {
+                    "정원이 초과되었습니다"
+                }
+            return PracticeAttemptResponse(
+                isSuccess = existingDetail.isSuccess,
+                message = message,
+            )
+        }
+
+        // 7. 교과분류 기반 분포 파라미터 결정
         val distributionParams = distributionConfig.getParamsForClassification(course.classification)
 
-        // 7. 로그정규분포 계산
+        // 8. 로그정규분포 계산
         val distributionUtil =
             LogNormalDistributionUtil(
                 scale = distributionParams.scale,
                 shape = distributionParams.shape,
             )
 
-        // 8. 백분위(Percentile) 계산
+        // 9. 백분위(Percentile) 계산
         val percentile = distributionUtil.calculatePercentile(request.userLatencyMs)
 
-        // 9. 등수(Rank) 산출
+        // 10. 등수(Rank) 산출
         val rank = distributionUtil.calculateRank(percentile, request.totalCompetitors)
 
-        // 10. 성공 여부 판정
+        // 11. 성공 여부 판정
         val isSuccess = distributionUtil.isSuccessful(rank, request.capacity)
 
-        // 11. PracticeDetail 저장 (통계 정보 포함)
+        // 12. PracticeDetail 저장 (통계 정보 포함)
         val practiceDetail =
             PracticeDetail(
                 practiceLog = practiceLog,
                 course = course,
                 isSuccess = isSuccess,
                 reactionTime = request.userLatencyMs,
-                earlyClickDiff = null,
                 rank = rank,
                 percentile = percentile,
                 capacity = request.capacity,
@@ -177,7 +191,7 @@ class PracticeService(
             )
         practiceDetailRepository.save(practiceDetail)
 
-        // 12. 응답 반환 (간소화)
+        // 13. 응답 반환 (간소화)
         val message =
             if (isSuccess) {
                 "수강신청에 성공했습니다"
@@ -209,13 +223,12 @@ class PracticeService(
 
     /**
      * Early Click (너무 일찍 클릭한 경우)을 처리합니다.
-     * earlyClickRecordingWindowMs 범위 내인 경우 DB에 기록하고,
+     * earlyClickRecordingWindowMs 범위 내인 경우 PracticeLog에 기록하고,
      * 그 외에는 기록하지 않습니다.
      */
     private fun handleEarlyClick(
         request: PracticeAttemptRequest,
         practiceLog: PracticeLog,
-        course: com.wafflestudio.team8server.course.model.Course,
     ): PracticeAttemptResponse {
         // 일찍 클릭한 시간 (양수로 변환)
         val earlyClickAmount = kotlin.math.abs(request.userLatencyMs)
@@ -223,26 +236,10 @@ class PracticeService(
         // 기록 범위 내인지 확인 (예: 500ms <= 1000ms → 기록, 2000ms <= 1000ms → 기록 안 함)
         val shouldRecord = earlyClickAmount <= sessionConfig.earlyClickRecordingWindowMs
 
-        // 분포 파라미터 조회
-        val distributionParams = distributionConfig.getParamsForClassification(course.classification)
-
         if (shouldRecord) {
-            // earlyClickRecordingWindowMs 범위 내: DB에 기록
-            val practiceDetail =
-                PracticeDetail(
-                    practiceLog = practiceLog,
-                    course = course,
-                    isSuccess = false,
-                    reactionTime = 0, // Early click이므로 reactionTime은 0으로 설정
-                    earlyClickDiff = request.userLatencyMs, // 음수 값으로 저장
-                    rank = null,
-                    percentile = null,
-                    capacity = request.capacity,
-                    totalCompetitors = request.totalCompetitors,
-                    distributionScale = distributionParams.scale,
-                    distributionShape = distributionParams.shape,
-                )
-            practiceDetailRepository.save(practiceDetail)
+            // earlyClickRecordingWindowMs 범위 내: PracticeLog에 기록
+            practiceLog.earlyClickDiff = request.userLatencyMs
+            practiceLogRepository.save(practiceLog)
         }
 
         // earlyClickRecordingWindowMs 범위와 상관없이 동일한 메시지
@@ -288,13 +285,13 @@ class PracticeService(
                     rank = detail.rank,
                     percentile = detail.percentile,
                     reactionTime = detail.reactionTime,
-                    earlyClickDiff = detail.earlyClickDiff,
                 )
             }
 
         return PracticeResultResponse(
             practiceLogId = practiceLog.id!!,
             practiceAt = practiceLog.practiceAt.toString(),
+            earlyClickDiff = practiceLog.earlyClickDiff,
             totalAttempts = details.size,
             successCount = successCount,
             attempts = attempts,

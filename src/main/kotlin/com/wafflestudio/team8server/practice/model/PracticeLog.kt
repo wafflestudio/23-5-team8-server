@@ -20,6 +20,8 @@ class PracticeLog(
     val user: User,
     @Column(name = "practice_at", nullable = false)
     val practiceAt: LocalDateTime = LocalDateTime.now(),
+    @Column(name = "early_click_diff", nullable = true)
+    var earlyClickDiff: Int? = null,
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,

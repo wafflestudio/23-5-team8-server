@@ -383,13 +383,27 @@ class PracticeControllerTest
         fun `multiple attempts in one session`() {
             val token = signupAndGetToken()
 
+            // 두 번째 강의 생성
+            val savedCourse2 =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "CS102",
+                        lectureNumber = "002",
+                        courseTitle = "알고리즘",
+                        quota = 50,
+                        instructor = "김교수",
+                    ),
+                )
+
             // 세션 시작
             mockMvc.perform(
                 post("/api/practice/start")
                     .header("Authorization", "Bearer $token"),
             )
 
-            // 첫 번째 시도
+            // 첫 번째 강의 시도
             val request1 =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
@@ -405,10 +419,10 @@ class PracticeControllerTest
                     .content(objectMapper.writeValueAsString(request1)),
             )
 
-            // 두 번째 시도
+            // 두 번째 강의 시도
             val request2 =
                 PracticeAttemptRequest(
-                    courseId = savedCourse.id!!,
+                    courseId = savedCourse2.id!!,
                     userLatencyMs = 200,
                     totalCompetitors = 100,
                     capacity = 40,
@@ -429,6 +443,122 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token"),
                 ).andExpect(status().isOk)
                 .andExpect(jsonPath("$.totalAttempts").value(2))
+        }
+
+        @Test
+        @DisplayName("같은 과목 중복 시도 시 이전 결과 반환 - 성공 케이스")
+        fun `duplicate attempt returns already enrolled message when first attempt succeeded`() {
+            val token = signupAndGetToken()
+
+            // 세션 시작
+            mockMvc.perform(
+                post("/api/practice/start")
+                    .header("Authorization", "Bearer $token"),
+            )
+
+            // 첫 번째 시도 (성공하도록 빠른 반응 시간)
+            val request1 =
+                PracticeAttemptRequest(
+                    courseId = savedCourse.id!!,
+                    userLatencyMs = 50,
+                    totalCompetitors = 100,
+                    capacity = 40,
+                )
+
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request1)),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.message").value("수강신청에 성공했습니다"))
+
+            // 같은 강의 두 번째 시도 (중복)
+            val request2 =
+                PracticeAttemptRequest(
+                    courseId = savedCourse.id!!,
+                    userLatencyMs = 200,
+                    totalCompetitors = 100,
+                    capacity = 40,
+                )
+
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request2)),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.message").value("이미 수강신청된 강의입니다"))
+
+            // 세션 종료 후 totalAttempts가 1인지 확인 (중복 시도는 DB에 저장 안 됨)
+            mockMvc
+                .perform(
+                    post("/api/practice/end")
+                        .header("Authorization", "Bearer $token"),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.totalAttempts").value(1))
+        }
+
+        @Test
+        @DisplayName("같은 과목 중복 시도 시 이전 결과 반환 - 실패 케이스")
+        fun `duplicate attempt returns capacity exceeded message when first attempt failed`() {
+            val token = signupAndGetToken()
+
+            // 세션 시작
+            mockMvc.perform(
+                post("/api/practice/start")
+                    .header("Authorization", "Bearer $token"),
+            )
+
+            // 첫 번째 시도 (실패하도록 느린 반응 시간)
+            val request1 =
+                PracticeAttemptRequest(
+                    courseId = savedCourse.id!!,
+                    userLatencyMs = 5000,
+                    totalCompetitors = 100,
+                    capacity = 40,
+                )
+
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request1)),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.message").value("정원이 초과되었습니다"))
+
+            // 같은 강의 두 번째 시도 (중복)
+            val request2 =
+                PracticeAttemptRequest(
+                    courseId = savedCourse.id!!,
+                    userLatencyMs = 50,
+                    totalCompetitors = 100,
+                    capacity = 40,
+                )
+
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request2)),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.message").value("정원이 초과되었습니다"))
+
+            // 세션 종료 후 totalAttempts가 1인지 확인
+            mockMvc
+                .perform(
+                    post("/api/practice/end")
+                        .header("Authorization", "Bearer $token"),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.totalAttempts").value(1))
         }
 
         @Test
