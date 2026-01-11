@@ -5,11 +5,11 @@ import com.wafflestudio.team8server.common.extension.ensureNotNull
 import com.wafflestudio.team8server.user.JwtTokenProvider
 import com.wafflestudio.team8server.user.dto.LoginResponse
 import com.wafflestudio.team8server.user.dto.coreDto.UserDto
+import com.wafflestudio.team8server.user.enum.SocialProvider
 import com.wafflestudio.team8server.user.model.SocialCredential
 import com.wafflestudio.team8server.user.model.User
 import com.wafflestudio.team8server.user.repository.SocialCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
-import com.wafflestudio.team8server.user.enum.SocialProvider
 import com.wafflestudio.team8server.user.service.social.google.GoogleIdTokenVerifier
 import com.wafflestudio.team8server.user.service.social.google.GoogleOAuthClient
 import com.wafflestudio.team8server.user.service.social.kakao.KakaoOAuthClient
@@ -36,7 +36,6 @@ class SocialAuthService(
             } catch (e: Exception) {
                 throw UnauthorizedException("카카오 인증에 실패했습니다")
             }
-
 
         // 기존 SocialCredential 조회
         val provider = SocialProvider.KAKAO.dbValue()
@@ -95,7 +94,7 @@ class SocialAuthService(
                 throw UnauthorizedException("구글 인증에 실패했습니다")
             }
 
-        //val email =
+        // val email =
         //    googleUserInfo.email ?: throw SocialEmailRequiredException()
 
         val provider = SocialProvider.GOOGLE.dbValue()
