@@ -5,7 +5,9 @@ import com.wafflestudio.team8server.user.dto.LoginRequest
 import com.wafflestudio.team8server.user.dto.LoginResponse
 import com.wafflestudio.team8server.user.dto.SignupRequest
 import com.wafflestudio.team8server.user.dto.SignupResponse
+import com.wafflestudio.team8server.user.dto.SocialLoginRequest
 import com.wafflestudio.team8server.user.service.AuthService
+import com.wafflestudio.team8server.user.service.SocialAuthService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/auth")
 class AuthController(
     private val authService: AuthService,
+    private val socialAuthService: SocialAuthService,
 ) {
     @Operation(
         summary = "회원가입",
@@ -184,6 +187,160 @@ class AuthController(
     fun login(
         @Valid @RequestBody request: LoginRequest,
     ): LoginResponse = authService.login(request)
+
+    @Operation(
+        summary = "카카오 소셜 로그인",
+        description =
+            "카카오 OAuth Authorization Code로 로그인합니다. " +
+                "처음 로그인하는 사용자라면 자동으로 회원가입 후 로그인 처리됩니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "로그인 성공 - 사용자 정보와 JWT 토큰 반환",
+                content = [Content(schema = Schema(implementation = LoginResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "유효성 검증 실패 (Authorization Code 누락 등)",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "validation-error",
+                                summary = "유효성 검증 실패",
+                                value = """
+                                    {
+                                        "timestamp": "2026-01-06T12:00:00",
+                                        "status": 400,
+                                        "error": "Bad Request",
+                                        "message": "입력 값이 유효하지 않습니다.",
+                                        "errorCode": "VALIDATION_FAILED",
+                                        "validationErrors": {
+                                            "code": "인가 코드는 필수입니다"
+                                        }   
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "인증 실패 (카카오 인증 실패 등)",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "authentication-failed",
+                                summary = "카카오 인증 실패",
+                                value = """
+                                    {
+                                        "timestamp": "2026-01-06T12:00:00",
+                                        "status": 401,
+                                        "error": "UNAUTHORIZED",
+                                        "message": "카카오 인증에 실패했습니다",
+                                        "errorCode": "UNAUTHORIZED",
+                                        "validationErrors": null
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "카카오 소셜 로그인 요청 정보",
+        required = true,
+    )
+    @PostMapping("/kakao/login")
+    @ResponseStatus(HttpStatus.OK)
+    fun kakaoLogin(
+        @Valid @RequestBody request: SocialLoginRequest,
+    ): LoginResponse = socialAuthService.kakaoLogin(request.code, request.redirectUri)
+
+    @Operation(
+        summary = "구글 소셜 로그인",
+        description =
+            "구글 OAuth Authorization Code로 로그인합니다. " +
+                "처음 로그인하는 사용자라면 자동으로 회원가입 후 로그인 처리됩니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "로그인 성공 - 사용자 정보와 JWT 토큰 반환",
+                content = [Content(schema = Schema(implementation = LoginResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "유효성 검증 실패 (Authorization Code 누락 등)",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "validation-error",
+                                summary = "유효성 검증 실패",
+                                value = """
+                                    {
+                                        "timestamp": "2026-01-06T12:00:00",
+                                        "status": 400,
+                                        "error": "Bad Request",
+                                        "message": "입력 값이 유효하지 않습니다",
+                                        "errorCode": "VALIDATION_FAILED",
+                                        "validationErrors": {
+                                            "code": "인가 코드는 필수입니다"
+                                        }
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "인증 실패 (구글 인증 실패 등)",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "authentication-failed",
+                                summary = "구글 인증 실패",
+                                value = """
+                                    {
+                                        "timestamp": "2026-01-06T12:00:00",
+                                        "status": 401,
+                                        "error": "UNAUTHORIZED",
+                                        "message": "구글 인증에 실패했습니다",
+                                        "errorCode": "UNAUTHORIZED",
+                                        "validationErrors": null
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "구글 소셜 로그인 요청 정보",
+        required = true,
+    )
+    @PostMapping("/google/login")
+    @ResponseStatus(HttpStatus.OK)
+    fun googleLogin(
+        @Valid @RequestBody request: SocialLoginRequest,
+    ): LoginResponse = socialAuthService.googleLogin(request.code, request.redirectUri)
 
     @Operation(
         summary = "로그아웃",

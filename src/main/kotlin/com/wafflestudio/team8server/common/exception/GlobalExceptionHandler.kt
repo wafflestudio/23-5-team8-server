@@ -3,6 +3,7 @@ package com.wafflestudio.team8server.common.exception
 import io.swagger.v3.oas.annotations.media.Schema
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -71,6 +72,19 @@ class GlobalExceptionHandler {
                 message = "입력 값이 유효하지 않습니다",
                 errorCode = "VALIDATION_FAILED",
                 validationErrors = errors, // {"email": "이메일은 필수입니다", ...}
+            )
+        return ResponseEntity.badRequest().body(response)
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleHttpMessageNotReadableException(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> {
+        val response =
+            ErrorResponse(
+                status = HttpStatus.BAD_REQUEST.value(),
+                error = "Bad Request",
+                message = "입력 값이 유효하지 않습니다",
+                errorCode = "VALIDATION_FAILED",
+                validationErrors = null,
             )
         return ResponseEntity.badRequest().body(response)
     }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.wafflestudio.team8server.TestcontainersConfiguration
 import com.wafflestudio.team8server.user.dto.LoginRequest
 import com.wafflestudio.team8server.user.dto.SignupRequest
+import com.wafflestudio.team8server.user.dto.SocialLoginRequest
 import com.wafflestudio.team8server.user.repository.LocalCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
 import com.wafflestudio.team8server.user.service.TokenBlacklistService
@@ -266,6 +267,66 @@ class AuthControllerTest
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)),
                 ).andExpect(status().isUnauthorized) // 401
+        }
+
+        @Test
+        @DisplayName("카카오 소셜 로그인 시 요청 바디가 비어있다면 400 BAD_REQUEST 반환")
+        fun `kakao social login with empty body returns 400`() {
+            mockMvc
+                .perform(
+                    post("/api/auth/kakao/login")
+                        .contentType(MediaType.APPLICATION_JSON),
+                ).andDo(print())
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+        }
+
+        @Test
+        @DisplayName("카카오 소셜 로그인 시 code가 누락되면 400 BAD_REQUEST 반환")
+        fun `kakao social login with blank code returns 400`() {
+            val request = SocialLoginRequest(code = "", redirectUri = null)
+
+            mockMvc
+                .perform(
+                    post("/api/auth/kakao/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)),
+                ).andDo(print())
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.validationErrors.code").exists())
+        }
+
+        @Test
+        @DisplayName("구글 소셜 로그인 시 요청 바디가 비어있다면 400 BAD_REQUEST 반환")
+        fun `google social login with empty body returns 400`() {
+            mockMvc
+                .perform(
+                    post("/api/auth/google/login")
+                        .contentType(MediaType.APPLICATION_JSON),
+                ).andDo(print())
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+        }
+
+        @Test
+        @DisplayName("구글 소셜 로그인 시 code가 누락되면 400 BAD_REQUEST 반환")
+        fun `google social login with blank code returns 400`() {
+            val request = SocialLoginRequest(code = "", redirectUri = null)
+
+            mockMvc
+                .perform(
+                    post("/api/auth/google/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)),
+                ).andDo(print())
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.validationErrors.code").exists())
         }
 
         // 실제 인증이 필요한 엔드포인트 구현 후 활성화 가능

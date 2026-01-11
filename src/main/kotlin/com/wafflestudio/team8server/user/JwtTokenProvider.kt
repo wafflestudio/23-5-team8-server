@@ -23,7 +23,7 @@ class JwtTokenProvider(
 
     fun createToken(
         userId: Long?,
-        email: String,
+        // email: String,
     ): String {
         val now = Date()
         val expiryDate = Date(now.time + expirationInMs)
@@ -31,7 +31,7 @@ class JwtTokenProvider(
         return Jwts
             .builder()
             .subject(userId.ensureNotNull().toString()) // 토큰의 주체(subject): 사용자 ID
-            .claim("email", email) // 추가 정보: 이메일
+            // .claim("email", email) // 추가 정보: 이메일
             .issuedAt(now) // 토큰 발급 시간
             .expiration(expiryDate) // 토큰 만료 시간
             .signWith(key) // HMAC-SHA256으로 서명

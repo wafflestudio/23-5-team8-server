@@ -22,3 +22,11 @@ jwt:
 
 server:
   port: 8080
+
+oauth:
+  kakao:
+    client-id: change-me
+    client-secret: change-me
+  google:
+    client-id: change-me
+    client-secret: change-me
