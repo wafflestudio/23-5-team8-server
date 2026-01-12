@@ -11,3 +11,16 @@ spring:
 jwt:
   secret: test-secret-key-for-testing-at-least-256-bits-long-hs256-algorithm
   expiration-in-ms: 36000000
+
+# 수강신청 연습 설정 (테스트용)
+practice:
+  session:
+    virtual-start-time: "08:28:00"
+    target-time: "08:30:00"
+    time-limit-seconds: 300
+    early-click-recording-window-ms: 5000  # Early click 기록 범위 (ms)
+    lock-ttl-seconds: 10  # 서버 크래시 시 안전장치
+  distribution:
+    default:
+      scale: 5.0
+      shape: 0.5
