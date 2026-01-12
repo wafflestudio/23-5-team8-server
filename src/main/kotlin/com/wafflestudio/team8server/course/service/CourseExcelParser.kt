@@ -1,5 +1,6 @@
 package com.wafflestudio.team8server.course.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.wafflestudio.team8server.course.model.Course
 import com.wafflestudio.team8server.course.model.Semester
 import org.apache.poi.hssf.usermodel.HSSFWorkbook
@@ -17,6 +18,7 @@ class CourseExcelParser {
 
     private val log = LoggerFactory.getLogger(CourseExcelParser::class.java)
     private val formatter = DataFormatter()
+    private val objectMapper = ObjectMapper()
 
     fun parse(
         file: MultipartFile,
@@ -33,6 +35,7 @@ class CourseExcelParser {
                         ?: throw IllegalStateException("Header row not found at index $HEADER_ROW_INDEX")
 
                 val headerIndex = buildHeaderIndex(headerRow)
+                log.info("Detected excel headers: {}", headerIndex.keys)
 
                 val results = mutableListOf<Course>()
 
@@ -72,7 +75,9 @@ class CourseExcelParser {
         val courseNumber = stringCell(row, headerIndex, "교과목번호")
         val lectureNumber = stringCell(row, headerIndex, "강좌번호")
         val courseTitle = stringCell(row, headerIndex, "교과목명")
-        val quota = intCell(row, headerIndex, "정원")
+        val quotaPair = parseQuotaCell(row, headerIndex)
+        val quota = quotaPair?.first
+        val freshmanQuota = quotaPair?.second
 
         if (courseNumber.isNullOrBlank() || lectureNumber.isNullOrBlank() || courseTitle.isNullOrBlank() || quota == null) {
             log.debug(
@@ -92,9 +97,19 @@ class CourseExcelParser {
         val college = stringCell(row, headerIndex, "개설대학")
         val department = stringCell(row, headerIndex, "개설학과")
         val credit = intCell(row, headerIndex, "학점")
-        val instructor = stringCell(row, headerIndex, "담당교수")
-        val placeAndTime = stringCell(row, headerIndex, "수업교시")
-        val freshmanQuota = intCell(row, headerIndex, "신입생정원")
+        val instructor = stringCell(row, headerIndex, "주담당교수")
+        val placeRaw = stringCell(row, headerIndex, "강의실(동-호)(#연건, *평창)")
+        val timeRaw = stringCell(row, headerIndex, "수업교시")
+
+        val place = placeRaw?.trim()?.takeIf { it.isNotBlank() }
+        val time = timeRaw?.trim()?.takeIf { it.isNotBlank() }
+
+        val placeAndTime =
+            if (place == null && time == null) {
+                null
+            } else {
+                objectMapper.writeValueAsString(PlaceAndTimePayload(place = place, time = time))
+            }
 
         return Course(
             year = year,
@@ -161,4 +176,36 @@ class CourseExcelParser {
         }
         return true
     }
+
+    private fun parseQuotaCell(
+        row: Row,
+        headerIndex: Map<String, Int>,
+    ): Pair<Int, Int?>? {
+        val raw = stringCell(row, headerIndex, "정원") ?: return null
+
+        val trimmed = raw.trim()
+
+        val totalMatch = Regex("""^(\d+)""").find(trimmed)
+        val enrolledMatch = Regex("""\((\d+)\)""").find(trimmed)
+
+        val total =
+            totalMatch?.groupValues?.get(1)?.toIntOrNull()
+                ?: return null
+
+        val enrolled = enrolledMatch?.groupValues?.get(1)?.toIntOrNull()
+
+        val freshmanQuota =
+            if (enrolled != null) {
+                total - enrolled
+            } else {
+                null
+            }
+
+        return total to freshmanQuota
+    }
 }
+
+data class PlaceAndTimePayload(
+    val place: String?,
+    val time: String?,
+)

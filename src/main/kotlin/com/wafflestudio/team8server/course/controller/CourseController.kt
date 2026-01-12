@@ -41,6 +41,11 @@ class CourseController(
         @RequestParam semester: Semester,
         @RequestPart file: MultipartFile,
     ) {
-        courseService.import(year, semester, file)
+        try {
+            courseService.import(year, semester, file)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            throw e
+        }
     }
 }
