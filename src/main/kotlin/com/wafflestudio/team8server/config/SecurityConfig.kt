@@ -38,6 +38,8 @@ class SecurityConfig(
                         "/api/auth/login",
                         "/api/auth/kakao/login",
                         "/api/auth/google/login",
+                        "/api/courses/search",
+                        "/api/courses/import",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/swagger-ui.html",
