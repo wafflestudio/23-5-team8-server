@@ -53,3 +53,33 @@ docker compose down
 (로컬)애플리케이션을 실행한 후:
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
 - OpenAPI JSON: http://localhost:8080/v3/api-docs
+
+## 강의 데이터 import 절차
+
+강의 데이터는 서울대학교 수강신청 사이트(https://sugang.snu.ac.kr)에서 제공하는 엑셀(.xls) 파일을 직접 업로드하여 적재합니다.
+이는 매 학기 수동 작업으로 이루어지며, frontend와 연동되지 않습니다.
+
+### 1. 준비
+- 수강신청 사이트에서 검색 필터를 설정하지 않고 전체 강의 검색 결과를 얻어서 엑셀(.xls) 파일을 준비합니다.
+- 엑셀 파일은 다음 조건을 만족하는 것을 전제로 합니다.
+  - 파일 형식: .xls
+  - column header가 3행에 존재
+
+### 2. 서버 실행
+
+### 3. Import API 호출
+아래 API를 통해 강의 데이터를 적재합니다.
+```bash
+POST /api/courses/import
+```
+- Content type: multipart/form-data
+- Parameters:
+  - year: 연도
+  - semester: 학기 (SPRING, SUMMER, FALL, WINTER)
+  - file: 강의 엑셀 파일 (.xls)
+
+적재 예시(curl):
+```bash
+curl -X POST "http://localhost:8080/api/courses/import?year=2026&semester=SPRING" \
+  -F "file=@courses.xls"
+```
