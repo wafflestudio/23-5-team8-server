@@ -94,11 +94,7 @@ class PracticeService(
                 ?: throw NoActiveSessionException()
 
         // 2. 해당 세션의 시도 횟수 조회
-        val practiceLog =
-            practiceLogRepository.findByIdOrNull(practiceLogId)
-                ?: throw ResourceNotFoundException("연습 세션을 찾을 수 없습니다")
-
-        val totalAttempts = practiceDetailRepository.countByPracticeLog(practiceLog)
+        val totalAttempts = practiceDetailRepository.countByPracticeLogId(practiceLogId)
 
         // 3. Redis에서 세션 삭제
         practiceSessionService.endSession(userId)
@@ -141,7 +137,7 @@ class PracticeService(
                 ?: throw ResourceNotFoundException("강의를 찾을 수 없습니다 (ID: ${request.courseId})")
 
         // 6. 중복 시도 체크 (log_id, course_id)
-        val existingDetail = practiceDetailRepository.findByPracticeLogAndCourse(practiceLog, course)
+        val existingDetail = practiceDetailRepository.findByPracticeLogIdAndCourseId(practiceLogId, request.courseId)
         if (existingDetail != null) {
             // 이미 시도한 과목
             val message =
@@ -270,7 +266,7 @@ class PracticeService(
         }
 
         // 3. 모든 시도 내역 조회
-        val details = practiceDetailRepository.findByPracticeLog(practiceLog)
+        val details = practiceDetailRepository.findByPracticeLogId(practiceLogId)
 
         // 4. 성공 횟수 계산
         val successCount = details.count { it.isSuccess }
