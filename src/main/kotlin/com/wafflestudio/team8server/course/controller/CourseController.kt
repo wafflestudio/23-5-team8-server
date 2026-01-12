@@ -28,8 +28,7 @@ class CourseController(
     @GetMapping("/search")
     fun searchCourses(
         @ModelAttribute request: CourseSearchRequest,
-    ): CourseSearchResponse =
-        courseService.search(request)
+    ): CourseSearchResponse = courseService.search(request)
 
     @Operation(summary = "학기 강의 목록 파일 import")
     @PostMapping(
