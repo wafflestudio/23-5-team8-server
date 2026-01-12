@@ -7,15 +7,20 @@ import com.wafflestudio.team8server.course.dto.CourseSummaryResponse
 import com.wafflestudio.team8server.course.model.Semester
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.course.repository.CourseSpecification
+import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
 
 @Service
 class CourseService(
     private val courseRepository: CourseRepository,
+    private val courseExcelParser: CourseExcelParser,
 ) {
+    private val log = LoggerFactory.getLogger(CourseExcelParser::class.java)
+
     fun search(request: CourseSearchRequest): CourseSearchResponse {
         val pageable =
             PageRequest.of(
@@ -62,9 +67,29 @@ class CourseService(
         )
     }
 
+    @Transactional
     fun import(
         year: Int,
         semester: Semester,
         file: MultipartFile,
-    ): Unit = throw UnsupportedOperationException("not implemented yet")
+    ) {
+        val parsed =
+            courseExcelParser.parse(
+                file = file,
+                year = year,
+                semester = semester,
+            )
+
+        val deleted = courseRepository.deleteAllByYearAndSemester(year, semester)
+        if (deleted > 0) {
+            log.info("Deleted {} courses", deleted)
+        }
+        if (parsed.isEmpty()) {
+            log.warn("No courses are parsed from .xls file.")
+            return
+        }
+
+        courseRepository.saveAll(parsed)
+        log.info("Imported {} courses for year={}, semester={}", parsed.size, year, semester)
+    }
 }
