@@ -9,6 +9,7 @@ import com.wafflestudio.team8server.practice.dto.PracticeResultResponse
 import com.wafflestudio.team8server.practice.dto.PracticeStartResponse
 import com.wafflestudio.team8server.practice.service.PracticeService
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
@@ -103,6 +104,7 @@ class PracticeController(
     @PostMapping("/start")
     @ResponseStatus(HttpStatus.CREATED)
     fun startPractice(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
     ): PracticeStartResponse = practiceService.startPractice(userId)
 
@@ -173,6 +175,7 @@ class PracticeController(
     @PostMapping("/end")
     @ResponseStatus(HttpStatus.OK)
     fun endPractice(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
     ): PracticeEndResponse = practiceService.endPractice(userId)
 
@@ -379,6 +382,7 @@ class PracticeController(
     @PostMapping("/attempt")
     @ResponseStatus(HttpStatus.OK)
     fun attemptPractice(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
         @Valid @RequestBody request: PracticeAttemptRequest,
     ): PracticeAttemptResponse = practiceService.attemptPractice(userId, request)
@@ -507,6 +511,7 @@ class PracticeController(
     @GetMapping("/results/{practiceLogId}")
     @ResponseStatus(HttpStatus.OK)
     fun getPracticeResults(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
         @PathVariable practiceLogId: Long,
     ): PracticeResultResponse = practiceService.getPracticeResults(userId, practiceLogId)
