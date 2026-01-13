@@ -20,6 +20,7 @@ class PracticeSessionService(
     companion object {
         private const val SESSION_KEY_PREFIX = "practice:session:"
         private const val SESSION_LOCK_KEY_SUFFIX = ":lock"
+        private const val SESSION_START_TIME_SUFFIX = ":startTime"
     }
 
     /**
@@ -114,5 +115,36 @@ class PracticeSessionService(
     fun releaseLock(userId: Long) {
         val lockKey = SESSION_KEY_PREFIX + userId + SESSION_LOCK_KEY_SUFFIX
         redisTemplate.delete(lockKey)
+    }
+
+    /**
+     * 세션 시작 시간을 저장합니다.
+     *
+     * @param userId 사용자 ID
+     * @param startTimeMs 시작 시간 (epoch 이후 밀리초)
+     */
+    fun saveStartTime(
+        userId: Long,
+        startTimeMs: Long,
+    ) {
+        val startTimeKey = SESSION_KEY_PREFIX + userId + SESSION_START_TIME_SUFFIX
+        redisTemplate.opsForValue().set(
+            startTimeKey,
+            startTimeMs.toString(),
+            config.timeLimitSeconds,
+            TimeUnit.SECONDS,
+        )
+    }
+
+    /**
+     * 세션 시작 시간을 조회합니다.
+     *
+     * @param userId 사용자 ID
+     * @return 시작 시간 (epoch 이후 밀리초), 없으면 null
+     */
+    fun getStartTime(userId: Long): Long? {
+        val startTimeKey = SESSION_KEY_PREFIX + userId + SESSION_START_TIME_SUFFIX
+        val value = redisTemplate.opsForValue().get(startTimeKey)
+        return value?.toLongOrNull()
     }
 }

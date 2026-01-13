@@ -4,6 +4,7 @@ import com.wafflestudio.team8server.common.exception.ActiveSessionExistsExceptio
 import com.wafflestudio.team8server.common.exception.NoActiveSessionException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
+import com.wafflestudio.team8server.common.time.TimeProvider
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.practice.config.PracticeDistributionConfig
 import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
@@ -32,6 +33,7 @@ class PracticeService(
     private val practiceSessionService: PracticeSessionService,
     private val sessionConfig: PracticeSessionConfig,
     private val distributionConfig: PracticeDistributionConfig,
+    private val timeProvider: TimeProvider,
 ) {
     /**
      * 수강신청 연습 세션을 시작합니다.
@@ -63,8 +65,12 @@ class PracticeService(
             val practiceLog = PracticeLog(user = user)
             val savedLog = practiceLogRepository.save(practiceLog)
 
-            // 5. Redis에 세션 저장 (5분 TTL)
+            // 5. 세션 시작 시간 가져오기
+            val startTimeMs = timeProvider.currentTimeMillis()
+
+            // 6. Redis에 세션 저장 (5분 TTL)
             practiceSessionService.createSession(userId, savedLog.id!!)
+            practiceSessionService.saveStartTime(userId, startTimeMs)
 
             return PracticeStartResponse(
                 practiceLogId = savedLog.id!!,
@@ -74,7 +80,7 @@ class PracticeService(
                 message = "연습 세션이 시작되었습니다. 가상 시계가 ${sessionConfig.virtualStartTime} 로 세팅되었습니다.",
             )
         } finally {
-            // 6. 락 해제
+            // 7. 락 해제
             practiceSessionService.releaseLock(userId)
         }
     }
@@ -112,25 +118,34 @@ class PracticeService(
             practiceSessionService.getActiveSession(userId)
                 ?: throw NoActiveSessionException("수강신청 기간이 아닙니다(연습 세션이 존재하지 않습니다)")
 
-        // 2. PracticeLog 조회 (기존 세션 사용)
+        // 2. 세션 시작 시간 조회
+        val startTimeMs =
+            practiceSessionService.getStartTime(userId)
+                ?: throw ResourceNotFoundException("세션 시작 시간을 찾을 수 없습니다")
+
+        // 3. 서버 시간 기반 사용자 지연 시간 계산
+        val currentTimeMs = timeProvider.currentTimeMillis()
+        val userLatencyMs = (currentTimeMs - startTimeMs - sessionConfig.startToTargetOffsetMs).toInt()
+
+        // 4. PracticeLog 조회 (기존 세션 사용)
         val practiceLog =
             practiceLogRepository.findByIdOrNull(practiceLogId)
                 ?: throw ResourceNotFoundException("연습 세션을 찾을 수 없습니다")
 
-        // 3. Early Click 처리 (targetTime 기준 0ms 이하)
-        if (request.userLatencyMs <= 0) {
+        // 5. Early Click 처리 (targetTime 기준 0ms 이하)
+        if (userLatencyMs <= 0) {
             return handleEarlyClick(
-                request = request,
+                userLatencyMs = userLatencyMs,
                 practiceLog = practiceLog,
             )
         }
 
-        // 4. Course 존재 여부 검증
+        // 6. Course 존재 여부 검증
         val course =
             courseRepository.findByIdOrNull(request.courseId)
                 ?: throw ResourceNotFoundException("강의를 찾을 수 없습니다 (ID: ${request.courseId})")
 
-        // 5. 중복 시도 체크 (log_id, course_id)
+        // 7. 중복 시도 체크 (log_id, course_id)
         val existingDetail = practiceDetailRepository.findByPracticeLogIdAndCourseId(practiceLogId, request.courseId)
         if (existingDetail != null) {
             // 이미 시도한 과목
@@ -146,32 +161,32 @@ class PracticeService(
             )
         }
 
-        // 6. 교과분류 기반 분포 파라미터 결정
+        // 8. 교과분류 기반 분포 파라미터 결정
         val distributionParams = distributionConfig.getParamsForClassification(course.classification)
 
-        // 7. 로그정규분포 계산
+        // 9. 로그정규분포 계산
         val distributionUtil =
             LogNormalDistributionUtil(
                 scale = distributionParams.scale,
                 shape = distributionParams.shape,
             )
 
-        // 8. 백분위(Percentile) 계산
-        val percentile = distributionUtil.calculatePercentile(request.userLatencyMs)
+        // 10. 백분위(Percentile) 계산
+        val percentile = distributionUtil.calculatePercentile(userLatencyMs)
 
-        // 9. 등수(Rank) 산출
+        // 11. 등수(Rank) 산출
         val rank = distributionUtil.calculateRank(percentile, request.totalCompetitors)
 
-        // 10. 성공 여부 판정
+        // 12. 성공 여부 판정
         val isSuccess = distributionUtil.isSuccessful(rank, request.capacity)
 
-        // 11. PracticeDetail 저장 (통계 정보 포함)
+        // 13. PracticeDetail 저장 (통계 정보 포함)
         val practiceDetail =
             PracticeDetail(
                 practiceLog = practiceLog,
                 course = course,
                 isSuccess = isSuccess,
-                reactionTime = request.userLatencyMs,
+                reactionTime = userLatencyMs,
                 rank = rank,
                 percentile = percentile,
                 capacity = request.capacity,
@@ -181,7 +196,7 @@ class PracticeService(
             )
         practiceDetailRepository.save(practiceDetail)
 
-        // 12. 응답 반환 (간소화)
+        // 14. 응답 반환 (간소화)
         val message =
             if (isSuccess) {
                 "수강신청에 성공했습니다"
@@ -201,18 +216,18 @@ class PracticeService(
      * 그 외에는 기록하지 않습니다.
      */
     private fun handleEarlyClick(
-        request: PracticeAttemptRequest,
+        userLatencyMs: Int,
         practiceLog: PracticeLog,
     ): PracticeAttemptResponse {
         // 일찍 클릭한 시간 (양수로 변환)
-        val earlyClickAmount = kotlin.math.abs(request.userLatencyMs)
+        val earlyClickAmount = kotlin.math.abs(userLatencyMs)
 
         // 기록 범위 내인지 확인 (예: 500ms <= 1000ms → 기록, 2000ms <= 1000ms → 기록 안 함)
         val shouldRecord = earlyClickAmount <= sessionConfig.earlyClickRecordingWindowMs
 
         if (shouldRecord) {
             // earlyClickRecordingWindowMs 범위 내: PracticeLog에 기록
-            practiceLog.earlyClickDiff = request.userLatencyMs
+            practiceLog.earlyClickDiff = userLatencyMs
             practiceLogRepository.save(practiceLog)
         }
 
