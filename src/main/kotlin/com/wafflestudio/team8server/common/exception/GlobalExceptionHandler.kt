@@ -103,18 +103,6 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response)
     }
 
-    @ExceptionHandler(PracticeTimeExpiredException::class)
-    fun handlePracticeTimeExpiredException(e: PracticeTimeExpiredException): ResponseEntity<ErrorResponse> {
-        val response =
-            ErrorResponse(
-                status = HttpStatus.BAD_REQUEST.value(), // 400
-                error = "Bad Request",
-                message = e.message,
-                errorCode = e.errorCode,
-            )
-        return ResponseEntity.badRequest().body(response)
-    }
-
     @ExceptionHandler(NoActiveSessionException::class)
     fun handleNoActiveSessionException(e: NoActiveSessionException): ResponseEntity<ErrorResponse> {
         val response =

@@ -14,6 +14,7 @@ import com.wafflestudio.team8server.user.dto.SignupRequest
 import com.wafflestudio.team8server.user.repository.LocalCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -226,19 +227,29 @@ class PracticeControllerTest
                 .andExpect(jsonPath("$.errorCode").value("NO_ACTIVE_SESSION"))
         }
 
+        /**
+         * 수동 테스트 전용:
+         * Redis TTL은 시스템 시간 기반이므로 MockTimeProvider로 테스트할 수 없습니다.
+         *
+         * 수동 테스트 방법:
+         * 1. @Disabled 어노테이션 제거
+         * 2. application-test.yml의 practice.session.time-limit-seconds를 6으로 변경
+         * 3. 테스트 실행하면 7초 대기 후 세션이 만료되어 400 에러 발생하는지 확인
+         */
         @Test
-        @DisplayName("연습 시간 초과 시 400 반환")
+        @Disabled("Redis TTL은 시스템 시간 기반이므로 MockTimeProvider로 테스트 불가. 수동 테스트 필요.")
+        @DisplayName("연습 시간 초과 시 400 반환 (Redis TTL 만료로 세션 없음) - 수동 테스트")
         fun `attempt practice after time limit returns 400`() {
             val token = signupAndGetToken()
 
-            // 세션 시작 (현재 시간: 1000000000ms)
+            // 세션 시작
             mockMvc.perform(
                 post("/api/practice/start")
                     .header("Authorization", "Bearer $token"),
             )
 
-            // 5분 1초 경과 (300000ms + 1000ms = 301000ms)
-            mockTimeProvider.advance(301000)
+            // 7초 대기 (TTL 6초 설정 시 만료 확인)
+            Thread.sleep(7000)
 
             val request =
                 PracticeAttemptRequest(
@@ -255,7 +266,7 @@ class PracticeControllerTest
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)),
                 ).andExpect(status().isBadRequest) // 400
-                .andExpect(jsonPath("$.errorCode").value("PRACTICE_TIME_EXPIRED"))
+                .andExpect(jsonPath("$.errorCode").value("NO_ACTIVE_SESSION"))
         }
 
         @Test
@@ -285,7 +296,7 @@ class PracticeControllerTest
                         .content(objectMapper.writeValueAsString(request)),
                 ).andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.message").value("수강신청 시간이 아닙니다"))
+                .andExpect(jsonPath("$.message").value("수강신청 기간이 아닙니다"))
         }
 
         @Test
@@ -315,7 +326,7 @@ class PracticeControllerTest
                         .content(objectMapper.writeValueAsString(request)),
                 ).andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.message").value("수강신청 시간이 아닙니다"))
+                .andExpect(jsonPath("$.message").value("수강신청 기간이 아닙니다"))
         }
 
         @Test
