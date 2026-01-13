@@ -60,10 +60,11 @@ class PreEnrollControllerTest
             userRepository.deleteAll()
         }
 
-        private fun signupAndGetToken(email: String = "test@example.com"): String {
+        private fun signupAndGetToken(email: String? = null): String {
+            val actualEmail = email ?: "test+${java.util.UUID.randomUUID()}@example.com"
             val signupRequest =
                 SignupRequest(
-                    email = email,
+                    email = actualEmail,
                     password = "Test1234!",
                     nickname = "테스터",
                     profileImageUrl = null,
