@@ -138,4 +138,16 @@ class PreEnrollService(
             cartCount = saved.cartCount,
         )
     }
+
+    @Transactional
+    fun deletePreEnroll(
+        userId: Long,
+        courseId: Long,
+    ) {
+        val preEnroll =
+            preEnrollRepository.findByUserIdAndCourseId(userId, courseId)
+                ?: throw ResourceNotFoundException("장바구니에서 해당 강의를 찾을 수 없습니다")
+
+        preEnrollRepository.delete(preEnroll)
+    }
 }
