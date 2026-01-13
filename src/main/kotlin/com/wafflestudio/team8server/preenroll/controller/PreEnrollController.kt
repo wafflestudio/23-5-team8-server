@@ -4,6 +4,7 @@ import com.wafflestudio.team8server.common.auth.LoggedInUserId
 import com.wafflestudio.team8server.common.exception.ErrorResponse
 import com.wafflestudio.team8server.preenroll.dto.PreEnrollAddRequest
 import com.wafflestudio.team8server.preenroll.dto.PreEnrollCourseResponse
+import com.wafflestudio.team8server.preenroll.dto.PreEnrollUpdateCartCountRequest
 import com.wafflestudio.team8server.preenroll.service.PreEnrollService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -18,6 +19,7 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -259,4 +261,61 @@ class PreEnrollController(
     ) {
         preEnrollService.deletePreEnroll(userId, courseId)
     }
+
+    @Operation(
+        summary = "장바구니 항목 cartCount 수정",
+        description = "로그인한 사용자의 장바구니(pre-enroll)에서 특정 강의의 cartCount를 수정합니다.",
+        security = [SecurityRequirement(name = "Bearer Authentication")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "수정 성공",
+                content = [Content(schema = Schema(implementation = PreEnrollCourseResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "요청 검증 실패(cartCount 음수 등)",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "인증 실패",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "장바구니에 해당 강의가 없음",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "not-found",
+                                summary = "장바구니 항목 없음",
+                                value =
+                                    """
+                                {
+                                  "timestamp": "2026-01-08T12:00:00",
+                                  "status": 404,
+                                  "error": "Not Found",
+                                  "message": "장바구니에서 해당 강의를 찾을 수 없습니다",
+                                  "errorCode": "RESOURCE_NOT_FOUND",
+                                  "validationErrors": null
+                                }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    @PatchMapping("/{courseId}/cart-count")
+    fun updateCartCount(
+        @LoggedInUserId userId: Long,
+        @PathVariable courseId: Long,
+        @Valid @RequestBody request: PreEnrollUpdateCartCountRequest,
+    ): PreEnrollCourseResponse = preEnrollService.updateCartCount(userId, courseId, request.cartCount)
 }
