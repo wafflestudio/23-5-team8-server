@@ -150,4 +150,44 @@ class PreEnrollService(
 
         preEnrollRepository.delete(preEnroll)
     }
+
+    @Transactional
+    fun updateCartCount(
+        userId: Long,
+        courseId: Long,
+        cartCount: Int,
+    ): PreEnrollCourseResponse {
+        val preEnroll =
+            preEnrollRepository.findByUserIdAndCourseId(userId, courseId)
+                ?: throw ResourceNotFoundException("장바구니에서 해당 강의를 찾을 수 없습니다")
+
+        preEnroll.cartCount = cartCount
+
+        val saved = preEnrollRepository.save(preEnroll)
+        val course = saved.course
+
+        return PreEnrollCourseResponse(
+            preEnrollId = requireNotNull(saved.id),
+            course =
+                CourseDetailResponse(
+                    id = requireNotNull(course.id),
+                    year = course.year,
+                    semester = course.semester,
+                    classification = course.classification,
+                    college = course.college,
+                    department = course.department,
+                    academicCourse = course.academicCourse,
+                    academicYear = course.academicYear,
+                    courseNumber = course.courseNumber,
+                    lectureNumber = course.lectureNumber,
+                    courseTitle = course.courseTitle,
+                    credit = course.credit,
+                    instructor = course.instructor,
+                    placeAndTime = course.placeAndTime,
+                    quota = course.quota,
+                    freshmanQuota = course.freshmanQuota,
+                ),
+            cartCount = saved.cartCount,
+        )
+    }
 }
