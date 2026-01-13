@@ -9,6 +9,10 @@ spring:
         format_sql: true
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
 
   data:
     redis:
