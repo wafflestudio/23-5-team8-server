@@ -1,6 +1,8 @@
 package com.wafflestudio.team8server.common.exception
 
+import com.wafflestudio.team8server.course.service.CourseExcelParser
 import io.swagger.v3.oas.annotations.media.Schema
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -141,6 +143,8 @@ class GlobalExceptionHandler {
     @ExceptionHandler(Exception::class)
     fun handleUnexpectedException(e: Exception): ResponseEntity<ErrorResponse> {
         // 배포 시 로깅 (logger.error("Unexpected error", e))
+        val log = LoggerFactory.getLogger(CourseExcelParser::class.java)
+        log.error("UNEXPECTED_ERROR", e)
         val response =
             ErrorResponse(
                 status = HttpStatus.INTERNAL_SERVER_ERROR.value(), // 500
