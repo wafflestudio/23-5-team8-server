@@ -250,7 +250,7 @@ class PracticeController(
                                     """
                                 {
                                   "isSuccess": false,
-                                  "message": "수강신청 시간이 아닙니다"
+                                  "message": "수강신청 기간이 아닙니다"
                                 }
                                 """,
                             ),
@@ -260,22 +260,22 @@ class PracticeController(
             ),
             ApiResponse(
                 responseCode = "400",
-                description = "유효성 검증 실패 또는 연습 시간 종료",
+                description = "세션 없음 또는 유효성 검증 실패",
                 content = [
                     Content(
                         schema = Schema(implementation = ErrorResponse::class),
                         examples = [
                             ExampleObject(
-                                name = "time-expired",
-                                summary = "연습 시간 종료",
+                                name = "no-session",
+                                summary = "세션 없음 (시작 전 or TTL 만료)",
                                 value =
                                     """
                                 {
                                   "timestamp": "2026-01-08T12:00:00",
                                   "status": 400,
                                   "error": "Bad Request",
-                                  "message": "수강신청 시간이 아닙니다",
-                                  "errorCode": "PRACTICE_TIME_EXPIRED",
+                                  "message": "수강신청 기간이 아닙니다(연습 세션이 존재하지 않습니다)",
+                                  "errorCode": "NO_ACTIVE_SESSION",
                                   "validationErrors": null
                                 }
                                 """,

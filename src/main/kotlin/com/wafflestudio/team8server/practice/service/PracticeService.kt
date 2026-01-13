@@ -2,10 +2,8 @@ package com.wafflestudio.team8server.practice.service
 
 import com.wafflestudio.team8server.common.exception.ActiveSessionExistsException
 import com.wafflestudio.team8server.common.exception.NoActiveSessionException
-import com.wafflestudio.team8server.common.exception.PracticeTimeExpiredException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
-import com.wafflestudio.team8server.common.time.TimeProvider
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.practice.config.PracticeDistributionConfig
 import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
@@ -34,7 +32,6 @@ class PracticeService(
     private val practiceSessionService: PracticeSessionService,
     private val sessionConfig: PracticeSessionConfig,
     private val distributionConfig: PracticeDistributionConfig,
-    private val timeProvider: TimeProvider,
 ) {
     /**
      * 수강신청 연습 세션을 시작합니다.
@@ -113,17 +110,14 @@ class PracticeService(
         // 1. 활성 세션 확인
         val practiceLogId =
             practiceSessionService.getActiveSession(userId)
-                ?: throw NoActiveSessionException()
+                ?: throw NoActiveSessionException("수강신청 기간이 아닙니다(연습 세션이 존재하지 않습니다)")
 
-        // 2. Session & Time Validation (시간 유효성 검사)
-        validatePracticeTime(userId)
-
-        // 3. PracticeLog 조회 (기존 세션 사용)
+        // 2. PracticeLog 조회 (기존 세션 사용)
         val practiceLog =
             practiceLogRepository.findByIdOrNull(practiceLogId)
                 ?: throw ResourceNotFoundException("연습 세션을 찾을 수 없습니다")
 
-        // 4. Early Click 처리 (targetTime 기준 0ms 이하)
+        // 3. Early Click 처리 (targetTime 기준 0ms 이하)
         if (request.userLatencyMs <= 0) {
             return handleEarlyClick(
                 request = request,
@@ -131,12 +125,12 @@ class PracticeService(
             )
         }
 
-        // 5. Course 존재 여부 검증
+        // 4. Course 존재 여부 검증
         val course =
             courseRepository.findByIdOrNull(request.courseId)
                 ?: throw ResourceNotFoundException("강의를 찾을 수 없습니다 (ID: ${request.courseId})")
 
-        // 6. 중복 시도 체크 (log_id, course_id)
+        // 5. 중복 시도 체크 (log_id, course_id)
         val existingDetail = practiceDetailRepository.findByPracticeLogIdAndCourseId(practiceLogId, request.courseId)
         if (existingDetail != null) {
             // 이미 시도한 과목
@@ -152,26 +146,26 @@ class PracticeService(
             )
         }
 
-        // 7. 교과분류 기반 분포 파라미터 결정
+        // 6. 교과분류 기반 분포 파라미터 결정
         val distributionParams = distributionConfig.getParamsForClassification(course.classification)
 
-        // 8. 로그정규분포 계산
+        // 7. 로그정규분포 계산
         val distributionUtil =
             LogNormalDistributionUtil(
                 scale = distributionParams.scale,
                 shape = distributionParams.shape,
             )
 
-        // 9. 백분위(Percentile) 계산
+        // 8. 백분위(Percentile) 계산
         val percentile = distributionUtil.calculatePercentile(request.userLatencyMs)
 
-        // 10. 등수(Rank) 산출
+        // 9. 등수(Rank) 산출
         val rank = distributionUtil.calculateRank(percentile, request.totalCompetitors)
 
-        // 11. 성공 여부 판정
+        // 10. 성공 여부 판정
         val isSuccess = distributionUtil.isSuccessful(rank, request.capacity)
 
-        // 12. PracticeDetail 저장 (통계 정보 포함)
+        // 11. PracticeDetail 저장 (통계 정보 포함)
         val practiceDetail =
             PracticeDetail(
                 practiceLog = practiceLog,
@@ -187,7 +181,7 @@ class PracticeService(
             )
         practiceDetailRepository.save(practiceDetail)
 
-        // 13. 응답 반환 (간소화)
+        // 12. 응답 반환 (간소화)
         val message =
             if (isSuccess) {
                 "수강신청에 성공했습니다"
@@ -199,22 +193,6 @@ class PracticeService(
             isSuccess = isSuccess,
             message = message,
         )
-    }
-
-    /**
-     * 연습 시간이 유효한지 검증합니다.
-     * 세션 시작 후 설정된 제한 시간이 초과되면 예외를 발생시킵니다.
-     */
-    private fun validatePracticeTime(userId: Long) {
-        val startTime =
-            practiceSessionService.getSessionStartTime(userId)
-                ?: throw NoActiveSessionException()
-
-        val elapsedTimeMs = timeProvider.currentTimeMillis() - startTime
-
-        if (elapsedTimeMs >= sessionConfig.timeLimitMs) {
-            throw PracticeTimeExpiredException()
-        }
     }
 
     /**
@@ -241,7 +219,7 @@ class PracticeService(
         // earlyClickRecordingWindowMs 범위와 상관없이 동일한 메시지
         return PracticeAttemptResponse(
             isSuccess = false,
-            message = "수강신청 시간이 아닙니다",
+            message = "수강신청 기간이 아닙니다",
         )
     }
 
