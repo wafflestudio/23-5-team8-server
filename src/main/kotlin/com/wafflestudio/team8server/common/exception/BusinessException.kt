@@ -53,3 +53,24 @@ class ActiveSessionExistsException(
         message = message,
         errorCode = "ACTIVE_SESSION_EXISTS",
     )
+
+class PreEnrollAlreadyExistsException(
+    message: String = "이미 장바구니에 담긴 강의입니다",
+) : BusinessException(
+        message = message,
+        errorCode = "PRE_ENROLL_ALREADY_EXISTS",
+    )
+
+class DuplicateCourseNumberInPreEnrollException(
+    message: String = "교과목번호가 같은 강의는 장바구니에 함께 담을 수 없습니다",
+) : BusinessException(
+        message = message,
+        errorCode = "DUPLICATE_COURSE_NUMBER_IN_PRE_ENROLL",
+    )
+
+class TimeConflictInPreEnrollException(
+    message: String = "강의 시간이 겹치는 강의는 장바구니에 함께 담을 수 없습니다",
+) : BusinessException(
+        message = message,
+        errorCode = "TIME_CONFLICT_IN_PRE_ENROLL",
+    )
