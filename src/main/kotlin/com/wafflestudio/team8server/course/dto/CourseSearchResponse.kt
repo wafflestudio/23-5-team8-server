@@ -5,6 +5,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(description = "강의 검색 응답")
 data class CourseSearchResponse(
-    val items: List<CourseSummaryResponse>,
+    val items: List<CourseDetailResponse>,
     val pageInfo: PageInfo,
 )

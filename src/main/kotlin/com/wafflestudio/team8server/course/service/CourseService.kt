@@ -1,9 +1,9 @@
 package com.wafflestudio.team8server.course.service
 
 import com.wafflestudio.team8server.common.dto.PageInfo
+import com.wafflestudio.team8server.course.dto.CourseDetailResponse
 import com.wafflestudio.team8server.course.dto.CourseSearchRequest
 import com.wafflestudio.team8server.course.dto.CourseSearchResponse
-import com.wafflestudio.team8server.course.dto.CourseSummaryResponse
 import com.wafflestudio.team8server.course.model.Semester
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.course.repository.CourseSpecification
@@ -44,13 +44,23 @@ class CourseService(
 
         val items =
             page.content.map { course ->
-                CourseSummaryResponse(
+                CourseDetailResponse(
                     id = course.id!!,
+                    year = course.year,
+                    semester = course.semester,
+                    classification = course.classification,
+                    college = course.college,
+                    department = course.department,
+                    academicCourse = course.academicCourse,
+                    academicYear = course.academicYear,
                     courseNumber = course.courseNumber,
                     lectureNumber = course.lectureNumber,
                     courseTitle = course.courseTitle,
                     credit = course.credit,
+                    instructor = course.instructor,
                     placeAndTime = course.placeAndTime,
+                    quota = course.quota,
+                    freshmanQuota = course.freshmanQuota,
                 )
             }
 
