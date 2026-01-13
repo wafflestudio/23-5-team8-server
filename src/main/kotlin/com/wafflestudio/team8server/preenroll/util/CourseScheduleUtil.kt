@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 /**
  * Course.placeAndTime JSON을 time slot으로 변환하고 충돌 여부를 확인합니다.
  */
-class CourseScheduleUtil {
+object CourseScheduleUtil {
     fun extractTimeSlots(
         objectMapper: ObjectMapper,
         placeAndTimeJson: String?,
