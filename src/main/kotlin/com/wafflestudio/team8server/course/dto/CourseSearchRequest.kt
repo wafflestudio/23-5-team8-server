@@ -3,8 +3,8 @@ package com.wafflestudio.team8server.course.dto
 import io.swagger.v3.oas.annotations.media.Schema
 
 data class CourseSearchRequest(
-    @Schema(description = "교과목명")
-    val courseTitle: String? = null,
+    @Schema(description = "주 검색어(교과목명/교수명)")
+    val query: String? = null,
     @Schema(description = "교과목번호")
     val courseNumber: String? = null,
     @Schema(description = "이수과정")

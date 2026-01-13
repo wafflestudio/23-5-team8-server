@@ -6,7 +6,7 @@ import org.springframework.data.jpa.domain.Specification
 
 object CourseSpecification {
     fun search(
-        courseTitle: String?,
+        query: String?,
         courseNumber: String?,
         academicCourse: String?,
         academicYear: Int?,
@@ -17,11 +17,12 @@ object CourseSpecification {
         Specification { root, _, cb ->
             val predicates = mutableListOf<Predicate>()
 
-            if (!courseTitle.isNullOrBlank()) {
+            if (!query.isNullOrBlank()) {
+                val q = "%${query.trim()}%"
                 predicates +=
-                    cb.like(
-                        root.get("courseTitle"),
-                        "%${courseTitle.trim()}%",
+                    cb.or(
+                        cb.like(root.get("courseTitle"), q),
+                        cb.like(root.get("instructor"), q),
                     )
             }
 

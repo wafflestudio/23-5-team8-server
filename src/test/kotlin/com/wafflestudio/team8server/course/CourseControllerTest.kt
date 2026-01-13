@@ -39,8 +39,8 @@ class CourseControllerTest
         }
 
         @Test
-        @DisplayName("교과목명으로 강의 검색 시 items와 pageInfo 반환")
-        fun `search courses by courseTitle returns 200 with items`() {
+        @DisplayName("query로 강의 검색 시 교과목명 또는 교수명에 query를 포함하는 items와 pageInfo 반환")
+        fun `search courses by query returns 200 with items`() {
             courseRepository.saveAll(
                 listOf(
                     Course(
@@ -56,6 +56,23 @@ class CourseControllerTest
                         courseTitle = "컴퓨터조직론",
                         credit = 3,
                         instructor = "김장우",
+                        placeAndTime = """{"place":"301-102(무선랜제공)/301-102(무선랜제공)","time":"화(17:00~18:15)/목(17:00~18:15)"}""",
+                        quota = 100,
+                        freshmanQuota = 0,
+                    ),
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "전선",
+                        college = "공과대학",
+                        department = "전기·정보공학부",
+                        academicCourse = "학부",
+                        academicYear = "4",
+                        courseNumber = "430.318",
+                        lectureNumber = "001",
+                        courseTitle = "운영체제의 기초",
+                        credit = 3,
+                        instructor = "김조직",
                         placeAndTime = """{"place":"301-102(무선랜제공)/301-102(무선랜제공)","time":"화(17:00~18:15)/목(17:00~18:15)"}""",
                         quota = 100,
                         freshmanQuota = 0,
@@ -83,17 +100,23 @@ class CourseControllerTest
             mockMvc
                 .perform(
                     get("/api/courses/search")
-                        .queryParam("courseTitle", "조직"),
+                        .queryParam("query", "조직"),
                 ).andDo(print())
                 .andExpect(status().isOk)
                 .andExpect(jsonPath("$.items").isArray)
-                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items.length()").value(2))
                 .andExpect(jsonPath("$.items[0].id").isNumber)
-                .andExpect(jsonPath("$.items[0].courseNumber").value("430.322"))
+                .andExpect(jsonPath("$.items[0].courseNumber").value("430.318"))
                 .andExpect(jsonPath("$.items[0].lectureNumber").value("001"))
-                .andExpect(jsonPath("$.items[0].courseTitle").value("컴퓨터조직론"))
+                .andExpect(jsonPath("$.items[0].courseTitle").value("운영체제의 기초"))
                 .andExpect(jsonPath("$.items[0].credit").value(3))
                 .andExpect(jsonPath("$.items[0].placeAndTime").isString)
+                .andExpect(jsonPath("$.items[1].id").isNumber)
+                .andExpect(jsonPath("$.items[1].courseNumber").value("430.322"))
+                .andExpect(jsonPath("$.items[1].lectureNumber").value("001"))
+                .andExpect(jsonPath("$.items[1].courseTitle").value("컴퓨터조직론"))
+                .andExpect(jsonPath("$.items[1].credit").value(3))
+                .andExpect(jsonPath("$.items[1].placeAndTime").isString)
                 .andExpect(jsonPath("$.pageInfo").exists())
         }
 
@@ -159,7 +182,7 @@ class CourseControllerTest
             mockMvc
                 .perform(
                     get("/api/courses/search")
-                        .queryParam("courseTitle", "테스트")
+                        .queryParam("query", "테스트")
                         .queryParam("page", "0")
                         .queryParam("size", "1"),
                 ).andDo(print())

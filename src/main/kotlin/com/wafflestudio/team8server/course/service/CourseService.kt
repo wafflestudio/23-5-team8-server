@@ -31,7 +31,7 @@ class CourseService(
 
         val specification =
             CourseSpecification.search(
-                courseTitle = request.courseTitle,
+                query = request.query,
                 courseNumber = request.courseNumber,
                 academicCourse = request.academicCourse,
                 academicYear = request.academicYear,
