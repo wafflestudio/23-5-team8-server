@@ -11,6 +11,7 @@ import com.wafflestudio.team8server.preenroll.repository.PreEnrollRepository
 import com.wafflestudio.team8server.user.dto.SignupRequest
 import com.wafflestudio.team8server.user.repository.LocalCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -100,6 +101,14 @@ class PreEnrollControllerTest
                     quota = quota,
                 ),
             )
+
+        @AfterEach
+        fun tearDown() {
+            preEnrollRepository.deleteAll()
+            courseRepository.deleteAll()
+            localCredentialRepository.deleteAll()
+            userRepository.deleteAll()
+        }
 
         @Test
         @DisplayName("장바구니에 강의 추가 성공 시 201 반환")
