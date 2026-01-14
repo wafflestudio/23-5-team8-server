@@ -14,6 +14,7 @@ import com.wafflestudio.team8server.user.dto.SignupRequest
 import com.wafflestudio.team8server.user.repository.LocalCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -211,7 +212,47 @@ class PracticeControllerTest
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = 100,
+                    totalCompetitors = 100,
+                    capacity = 40,
+                )
+
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)),
+                ).andExpect(status().isBadRequest) // 400
+                .andExpect(jsonPath("$.errorCode").value("NO_ACTIVE_SESSION"))
+        }
+
+        /**
+         * 수동 테스트 전용:
+         * Redis TTL은 시스템 시간 기반이므로 MockTimeProvider로 테스트할 수 없습니다.
+         *
+         * 수동 테스트 방법:
+         * 1. @Disabled 어노테이션 제거
+         * 2. application-test.yml의 practice.session.time-limit-seconds를 6으로 변경
+         * 3. 테스트 실행하면 7초 대기 후 세션이 만료되어 400 에러 발생하는지 확인
+         */
+        @Test
+        @Disabled("Redis TTL은 시스템 시간 기반이므로 MockTimeProvider로 테스트 불가. 수동 테스트 필요.")
+        @DisplayName("연습 시간 초과 시 400 반환 (Redis TTL 만료로 세션 없음) - 수동 테스트")
+        fun `attempt practice after time limit returns 400`() {
+            val token = signupAndGetToken()
+
+            // 세션 시작
+            mockMvc.perform(
+                post("/api/practice/start")
+                    .header("Authorization", "Bearer $token"),
+            )
+
+            // 7초 대기 (TTL 6초 설정 시 만료 확인)
+            Thread.sleep(7000)
+
+            val request =
+                PracticeAttemptRequest(
+                    courseId = savedCourse.id!!,
                     totalCompetitors = 100,
                     capacity = 40,
                 )
@@ -227,52 +268,24 @@ class PracticeControllerTest
         }
 
         @Test
-        @DisplayName("연습 시간 초과 시 400 반환")
-        fun `attempt practice after time limit returns 400`() {
-            val token = signupAndGetToken()
-
-            // 세션 시작 (현재 시간: 1000000000ms)
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
-
-            // 5분 1초 경과 (300000ms + 1000ms = 301000ms)
-            mockTimeProvider.advance(301000)
-
-            val request =
-                PracticeAttemptRequest(
-                    courseId = savedCourse.id!!,
-                    userLatencyMs = 100,
-                    totalCompetitors = 100,
-                    capacity = 40,
-                )
-
-            mockMvc
-                .perform(
-                    post("/api/practice/attempt")
-                        .header("Authorization", "Bearer $token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)),
-                ).andExpect(status().isBadRequest) // 400
-                .andExpect(jsonPath("$.errorCode").value("PRACTICE_TIME_EXPIRED"))
-        }
-
-        @Test
         @DisplayName("Early click (-1000ms ~ 0ms) - DB에 기록됨")
         fun `attempt practice with early click within threshold records to DB`() {
             val token = signupAndGetToken()
 
-            // 세션 시작
+            // 세션 시작 (시작 시간: 1000000000ms)
             mockMvc.perform(
                 post("/api/practice/start")
                     .header("Authorization", "Bearer $token"),
             )
 
+            // 시간 조작: userLatencyMs = -500ms가 되도록 설정
+            // 현재 시간 = 세션 시작 시간 + startToTargetOffsetMs + userLatencyMs
+            // 현재 시간 = 1000000000 + 120000 + (-500) = 1000119500ms
+            mockTimeProvider.setTime(1000119500L)
+
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = -500, // -0.5초 (기록 범위 내)
                     totalCompetitors = 100,
                     capacity = 40,
                 )
@@ -285,7 +298,7 @@ class PracticeControllerTest
                         .content(objectMapper.writeValueAsString(request)),
                 ).andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.message").value("수강신청 시간이 아닙니다"))
+                .andExpect(jsonPath("$.message").value("수강신청 기간이 아닙니다"))
         }
 
         @Test
@@ -293,16 +306,19 @@ class PracticeControllerTest
         fun `attempt practice with early click outside threshold does not record to DB`() {
             val token = signupAndGetToken()
 
-            // 세션 시작
+            // 세션 시작 (시작 시간: 1000000000ms)
             mockMvc.perform(
                 post("/api/practice/start")
                     .header("Authorization", "Bearer $token"),
             )
 
+            // 시간 조작: userLatencyMs = -2000ms가 되도록 설정
+            // 현재 시간 = 1000000000 + 120000 + (-2000) = 1000118000ms
+            mockTimeProvider.setTime(1000118000L)
+
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = -2000, // -2초 (기록 범위 밖)
                     totalCompetitors = 100,
                     capacity = 40,
                 )
@@ -315,7 +331,7 @@ class PracticeControllerTest
                         .content(objectMapper.writeValueAsString(request)),
                 ).andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.message").value("수강신청 시간이 아닙니다"))
+                .andExpect(jsonPath("$.message").value("수강신청 기간이 아닙니다"))
         }
 
         @Test
@@ -323,16 +339,19 @@ class PracticeControllerTest
         fun `attempt practice successfully within capacity`() {
             val token = signupAndGetToken()
 
-            // 세션 시작
+            // 세션 시작 (시작 시간: 1000000000ms)
             mockMvc.perform(
                 post("/api/practice/start")
                     .header("Authorization", "Bearer $token"),
             )
 
+            // 시간 조작: userLatencyMs = 50ms가 되도록 설정 (매우 빠른 반응)
+            // 현재 시간 = 1000000000 + 120000 + 50 = 1000120050ms
+            mockTimeProvider.setTime(1000120050L)
+
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = 50, // 매우 빠른 반응 시간
                     totalCompetitors = 100,
                     capacity = 80, // 높은 정원
                 )
@@ -353,16 +372,19 @@ class PracticeControllerTest
         fun `attempt practice fails when exceeds capacity`() {
             val token = signupAndGetToken()
 
-            // 세션 시작
+            // 세션 시작 (시작 시간: 1000000000ms)
             mockMvc.perform(
                 post("/api/practice/start")
                     .header("Authorization", "Bearer $token"),
             )
 
+            // 시간 조작: userLatencyMs = 5000ms가 되도록 설정 (느린 반응)
+            // 현재 시간 = 1000000000 + 120000 + 5000 = 1000125000ms
+            mockTimeProvider.setTime(1000125000L)
+
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = 5000, // 느린 반응 시간
                     totalCompetitors = 100,
                     capacity = 10, // 낮은 정원
                 )
@@ -397,17 +419,17 @@ class PracticeControllerTest
                     ),
                 )
 
-            // 세션 시작
+            // 세션 시작 (시작 시간: 1000000000ms)
             mockMvc.perform(
                 post("/api/practice/start")
                     .header("Authorization", "Bearer $token"),
             )
 
-            // 첫 번째 강의 시도
+            // 첫 번째 강의 시도 (userLatencyMs = 100ms)
+            mockTimeProvider.setTime(1000120100L)
             val request1 =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = 100,
                     totalCompetitors = 100,
                     capacity = 40,
                 )
@@ -419,11 +441,11 @@ class PracticeControllerTest
                     .content(objectMapper.writeValueAsString(request1)),
             )
 
-            // 두 번째 강의 시도
+            // 두 번째 강의 시도 (userLatencyMs = 200ms)
+            mockTimeProvider.setTime(1000120200L)
             val request2 =
                 PracticeAttemptRequest(
                     courseId = savedCourse2.id!!,
-                    userLatencyMs = 200,
                     totalCompetitors = 100,
                     capacity = 40,
                 )
@@ -450,17 +472,17 @@ class PracticeControllerTest
         fun `duplicate attempt returns already enrolled message when first attempt succeeded`() {
             val token = signupAndGetToken()
 
-            // 세션 시작
+            // 세션 시작 (시작 시간: 1000000000ms)
             mockMvc.perform(
                 post("/api/practice/start")
                     .header("Authorization", "Bearer $token"),
             )
 
-            // 첫 번째 시도 (성공하도록 빠른 반응 시간)
+            // 첫 번째 시도 (성공하도록 빠른 반응 시간, userLatencyMs = 50ms)
+            mockTimeProvider.setTime(1000120050L)
             val request1 =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = 50,
                     totalCompetitors = 100,
                     capacity = 40,
                 )
@@ -475,11 +497,11 @@ class PracticeControllerTest
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.message").value("수강신청에 성공했습니다"))
 
-            // 같은 강의 두 번째 시도 (중복)
+            // 같은 강의 두 번째 시도 (중복, userLatencyMs = 200ms)
+            mockTimeProvider.setTime(1000120200L)
             val request2 =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = 200,
                     totalCompetitors = 100,
                     capacity = 40,
                 )
@@ -508,17 +530,17 @@ class PracticeControllerTest
         fun `duplicate attempt returns capacity exceeded message when first attempt failed`() {
             val token = signupAndGetToken()
 
-            // 세션 시작
+            // 세션 시작 (시작 시간: 1000000000ms)
             mockMvc.perform(
                 post("/api/practice/start")
                     .header("Authorization", "Bearer $token"),
             )
 
-            // 첫 번째 시도 (실패하도록 느린 반응 시간)
+            // 첫 번째 시도 (실패하도록 느린 반응 시간, userLatencyMs = 5000ms)
+            mockTimeProvider.setTime(1000125000L)
             val request1 =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = 5000,
                     totalCompetitors = 100,
                     capacity = 40,
                 )
@@ -533,11 +555,11 @@ class PracticeControllerTest
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.message").value("정원이 초과되었습니다"))
 
-            // 같은 강의 두 번째 시도 (중복)
+            // 같은 강의 두 번째 시도 (중복, userLatencyMs = 5050ms)
+            mockTimeProvider.setTime(1000125050L)
             val request2 =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = 50,
                     totalCompetitors = 100,
                     capacity = 40,
                 )
@@ -575,7 +597,6 @@ class PracticeControllerTest
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    userLatencyMs = 100,
                     totalCompetitors = 0, // 유효하지 않은 값
                     capacity = 40,
                 )

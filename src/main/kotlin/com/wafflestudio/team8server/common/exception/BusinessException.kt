@@ -30,14 +30,6 @@ class UnauthorizedException(
         errorCode = "UNAUTHORIZED",
     )
 
-// 연습 시간 종료
-class PracticeTimeExpiredException(
-    message: String = "수강신청 시간이 아닙니다",
-) : BusinessException(
-        message = message,
-        errorCode = "PRACTICE_TIME_EXPIRED",
-    )
-
 // 활성 세션 없음
 class NoActiveSessionException(
     message: String = "활성화된 연습 세션이 없습니다",

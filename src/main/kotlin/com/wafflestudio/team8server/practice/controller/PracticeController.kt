@@ -9,6 +9,7 @@ import com.wafflestudio.team8server.practice.dto.PracticeResultResponse
 import com.wafflestudio.team8server.practice.dto.PracticeStartResponse
 import com.wafflestudio.team8server.practice.service.PracticeService
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
@@ -50,59 +51,19 @@ class PracticeController(
             ApiResponse(
                 responseCode = "201",
                 description = "연습 세션 시작 성공",
-                content = [
-                    Content(
-                        schema = Schema(implementation = PracticeStartResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "start-success",
-                                summary = "세션 시작 성공",
-                                value =
-                                    """
-                                {
-                                  "practiceLogId": 123,
-                                  "virtualStartTime": "08:28:00",
-                                  "targetTime": "08:30:00",
-                                  "timeLimit": "08:33:00",
-                                  "message": "연습 세션이 시작되었습니다. 가상 시계가 08:28:00 로 세팅되었습니다."
-                                }
-                                """,
-                            ),
-                        ],
-                    ),
-                ],
+                content = [Content(schema = Schema(implementation = PracticeStartResponse::class))],
             ),
             ApiResponse(
                 responseCode = "409",
                 description = "이미 진행 중인 세션 존재",
-                content = [
-                    Content(
-                        schema = Schema(implementation = ErrorResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "session-exists",
-                                summary = "세션 중복",
-                                value =
-                                    """
-                                {
-                                  "timestamp": "2026-01-08T12:00:00",
-                                  "status": 409,
-                                  "error": "Conflict",
-                                  "message": "이미 진행 중인 연습 세션이 있습니다",
-                                  "errorCode": "ACTIVE_SESSION_EXISTS",
-                                  "validationErrors": null
-                                }
-                                """,
-                            ),
-                        ],
-                    ),
-                ],
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
     )
     @PostMapping("/start")
     @ResponseStatus(HttpStatus.CREATED)
     fun startPractice(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
     ): PracticeStartResponse = practiceService.startPractice(userId)
 
@@ -123,56 +84,19 @@ class PracticeController(
             ApiResponse(
                 responseCode = "200",
                 description = "연습 세션 종료 성공",
-                content = [
-                    Content(
-                        schema = Schema(implementation = PracticeEndResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "end-success",
-                                summary = "세션 종료 성공",
-                                value =
-                                    """
-                                {
-                                  "message": "연습 세션이 종료되었습니다.",
-                                  "totalAttempts": 5
-                                }
-                                """,
-                            ),
-                        ],
-                    ),
-                ],
+                content = [Content(schema = Schema(implementation = PracticeEndResponse::class))],
             ),
             ApiResponse(
                 responseCode = "400",
                 description = "활성 세션 없음",
-                content = [
-                    Content(
-                        schema = Schema(implementation = ErrorResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "no-session",
-                                summary = "세션 없음",
-                                value =
-                                    """
-                                {
-                                  "timestamp": "2026-01-08T12:00:00",
-                                  "status": 400,
-                                  "error": "Bad Request",
-                                  "message": "활성화된 연습 세션이 없습니다",
-                                  "errorCode": "NO_ACTIVE_SESSION",
-                                  "validationErrors": null
-                                }
-                                """,
-                            ),
-                        ],
-                    ),
-                ],
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
     )
     @PostMapping("/end")
     @ResponseStatus(HttpStatus.OK)
     fun endPractice(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
     ): PracticeEndResponse = practiceService.endPractice(userId)
 
@@ -214,171 +138,29 @@ class PracticeController(
             ApiResponse(
                 responseCode = "200",
                 description = "수강신청 시도 성공 (성공/실패 판정 완료)",
-                content = [
-                    Content(
-                        schema = Schema(implementation = PracticeAttemptResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "success-example",
-                                summary = "수강신청 성공",
-                                value =
-                                    """
-                                {
-                                  "isSuccess": true,
-                                  "message": "수강신청에 성공했습니다"
-                                }
-                                """,
-                            ),
-                            ExampleObject(
-                                name = "failure-example",
-                                summary = "수강신청 실패",
-                                value =
-                                    """
-                                {
-                                  "isSuccess": false,
-                                  "message": "정원이 초과되었습니다"
-                                }
-                                """,
-                            ),
-                            ExampleObject(
-                                name = "early-click-example",
-                                summary = "너무 일찍 클릭",
-                                value =
-                                    """
-                                {
-                                  "isSuccess": false,
-                                  "message": "수강신청 시간이 아닙니다"
-                                }
-                                """,
-                            ),
-                        ],
-                    ),
-                ],
+                content = [Content(schema = Schema(implementation = PracticeAttemptResponse::class))],
             ),
             ApiResponse(
                 responseCode = "400",
-                description = "유효성 검증 실패 또는 연습 시간 종료",
-                content = [
-                    Content(
-                        schema = Schema(implementation = ErrorResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "time-expired",
-                                summary = "연습 시간 종료",
-                                value =
-                                    """
-                                {
-                                  "timestamp": "2026-01-08T12:00:00",
-                                  "status": 400,
-                                  "error": "Bad Request",
-                                  "message": "수강신청 시간이 아닙니다",
-                                  "errorCode": "PRACTICE_TIME_EXPIRED",
-                                  "validationErrors": null
-                                }
-                                """,
-                            ),
-                            ExampleObject(
-                                name = "validation-error",
-                                summary = "유효성 검증 실패",
-                                value =
-                                    """
-                                {
-                                  "timestamp": "2026-01-08T12:00:00",
-                                  "status": 400,
-                                  "error": "Bad Request",
-                                  "message": "입력 값이 유효하지 않습니다",
-                                  "errorCode": "VALIDATION_FAILED",
-                                  "validationErrors": {
-                                    "totalCompetitors": "전체 경쟁자 수는 1 이상이어야 합니다"
-                                  }
-                                }
-                                """,
-                            ),
-                        ],
-                    ),
-                ],
+                description = "세션 없음 또는 유효성 검증 실패",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
                 responseCode = "401",
-                description = "인증 실패 (로그인 필요)",
-                content = [
-                    Content(
-                        schema = Schema(implementation = ErrorResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "unauthorized",
-                                summary = "인증 실패",
-                                value =
-                                    """
-                                {
-                                  "timestamp": "2026-01-08T12:00:00",
-                                  "status": 401,
-                                  "error": "UNAUTHORIZED",
-                                  "message": "인증에 실패했습니다",
-                                  "errorCode": "UNAUTHORIZED",
-                                  "validationErrors": null
-                                }
-                                """,
-                            ),
-                        ],
-                    ),
-                ],
+                description = "인증 실패",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
                 responseCode = "404",
-                description = "사용자를 찾을 수 없음",
-                content = [
-                    Content(
-                        schema = Schema(implementation = ErrorResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "user-not-found",
-                                summary = "사용자 없음",
-                                value =
-                                    """
-                                {
-                                  "timestamp": "2026-01-08T12:00:00",
-                                  "status": 404,
-                                  "error": "Not Found",
-                                  "message": "사용자를 찾을 수 없습니다",
-                                  "errorCode": "RESOURCE_NOT_FOUND",
-                                  "validationErrors": null
-                                }
-                                """,
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    )
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(
-        description = "수강신청 연습 시도 요청 정보",
-        required = true,
-        content = [
-            Content(
-                schema = Schema(implementation = PracticeAttemptRequest::class),
-                examples = [
-                    ExampleObject(
-                        name = "request-example",
-                        summary = "요청 예시",
-                        value =
-                            """
-                        {
-                          "courseId": 1,
-                          "userLatencyMs": 120,
-                          "totalCompetitors": 100,
-                          "capacity": 40
-                        }
-                        """,
-                    ),
-                ],
+                description = "강의를 찾을 수 없음",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
     )
     @PostMapping("/attempt")
     @ResponseStatus(HttpStatus.OK)
     fun attemptPractice(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
         @Valid @RequestBody request: PracticeAttemptRequest,
     ): PracticeAttemptResponse = practiceService.attemptPractice(userId, request)
@@ -400,113 +182,24 @@ class PracticeController(
             ApiResponse(
                 responseCode = "200",
                 description = "결과 조회 성공",
-                content = [
-                    Content(
-                        schema = Schema(implementation = PracticeResultResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "result-example",
-                                summary = "결과 조회 예시",
-                                value =
-                                    """
-                                {
-                                  "practiceLogId": 123,
-                                  "practiceAt": "2026-01-11T14:30:00",
-                                  "totalAttempts": 5,
-                                  "successCount": 2,
-                                  "attempts": [
-                                    {
-                                      "courseId": 1,
-                                      "courseTitle": "자료구조",
-                                      "isSuccess": true,
-                                      "rank": 15,
-                                      "percentile": 0.15,
-                                      "reactionTime": 120,
-                                      "earlyClickDiff": null
-                                    },
-                                    {
-                                      "courseId": 2,
-                                      "courseTitle": "알고리즘",
-                                      "isSuccess": false,
-                                      "rank": 55,
-                                      "percentile": 0.55,
-                                      "reactionTime": 500,
-                                      "earlyClickDiff": null
-                                    },
-                                    {
-                                      "courseId": 3,
-                                      "courseTitle": "운영체제",
-                                      "isSuccess": false,
-                                      "rank": null,
-                                      "percentile": null,
-                                      "reactionTime": 0,
-                                      "earlyClickDiff": -1500
-                                    }
-                                  ]
-                                }
-                                """,
-                            ),
-                        ],
-                    ),
-                ],
+                content = [Content(schema = Schema(implementation = PracticeResultResponse::class))],
             ),
             ApiResponse(
                 responseCode = "401",
                 description = "다른 사용자의 기록 접근 시도",
-                content = [
-                    Content(
-                        schema = Schema(implementation = ErrorResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "unauthorized",
-                                summary = "권한 없음",
-                                value =
-                                    """
-                                {
-                                  "timestamp": "2026-01-11T12:00:00",
-                                  "status": 401,
-                                  "error": "UNAUTHORIZED",
-                                  "message": "다른 사용자의 연습 기록에 접근할 수 없습니다",
-                                  "errorCode": "UNAUTHORIZED",
-                                  "validationErrors": null
-                                }
-                                """,
-                            ),
-                        ],
-                    ),
-                ],
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
             ApiResponse(
                 responseCode = "404",
                 description = "연습 기록을 찾을 수 없음",
-                content = [
-                    Content(
-                        schema = Schema(implementation = ErrorResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "not-found",
-                                summary = "기록 없음",
-                                value =
-                                    """
-                                {
-                                  "timestamp": "2026-01-11T12:00:00",
-                                  "status": 404,
-                                  "error": "Not Found",
-                                  "message": "연습 기록을 찾을 수 없습니다",
-                                  "errorCode": "RESOURCE_NOT_FOUND",
-                                  "validationErrors": null
-                                }
-                                """,
-                            ),
-                        ],
-                    ),
-                ],
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
         ],
     )
     @GetMapping("/results/{practiceLogId}")
     @ResponseStatus(HttpStatus.OK)
     fun getPracticeResults(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
         @PathVariable practiceLogId: Long,
     ): PracticeResultResponse = practiceService.getPracticeResults(userId, practiceLogId)
