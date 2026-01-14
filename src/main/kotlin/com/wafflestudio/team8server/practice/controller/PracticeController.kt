@@ -464,6 +464,7 @@ class PracticeController(
             - attempts: 각 시도의 상세 정보 리스트
               - courseId: 강의 ID
               - courseTitle: 강의명
+              - lectureNumber: 분반 번호
               - isSuccess: 성공 여부
               - rank: 등수
               - percentile: 백분위
@@ -495,6 +496,7 @@ class PracticeController(
                                         {
                                           "courseId": 123,
                                           "courseTitle": "운영체제",
+                                          "lectureNumber": "001",
                                           "isSuccess": true,
                                           "rank": 15,
                                           "percentile": 0.45,
@@ -503,6 +505,7 @@ class PracticeController(
                                         {
                                           "courseId": 456,
                                           "courseTitle": "자료구조",
+                                          "lectureNumber": "002",
                                           "isSuccess": false,
                                           "rank": 35,
                                           "percentile": 0.87,
@@ -511,6 +514,7 @@ class PracticeController(
                                         {
                                           "courseId": 789,
                                           "courseTitle": "알고리즘",
+                                          "lectureNumber": "001",
                                           "isSuccess": true,
                                           "rank": 8,
                                           "percentile": 0.26,
