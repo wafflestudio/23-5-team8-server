@@ -154,4 +154,20 @@ class GlobalExceptionHandler {
             )
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response)
     }
+
+    @ExceptionHandler(
+        PreEnrollAlreadyExistsException::class,
+        DuplicateCourseNumberInPreEnrollException::class,
+        TimeConflictInPreEnrollException::class,
+    )
+    fun handlePreEnrollConflict(e: BusinessException): ResponseEntity<ErrorResponse> {
+        val response =
+            ErrorResponse(
+                status = HttpStatus.CONFLICT.value(),
+                error = "Conflict",
+                message = e.message,
+                errorCode = e.errorCode,
+            )
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response)
+    }
 }
