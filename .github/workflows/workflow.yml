@@ -1,4 +1,4 @@
-name: Java CI & Deploy to k3s
+name: Java CI & CD to k3s
 
 on:
   push:
@@ -10,7 +10,7 @@ env:
   DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/my-backend-app
 
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,11 +23,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      - name: Run Ktlint Check
+        run: ./gradlew ktlintCheck --no-daemon
+
       - name: Run Tests
         run: ./gradlew test -Dspring.profiles.active=test --no-daemon
 
-  deploy:
-    needs: test
+  cd:
+    needs: ci
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
