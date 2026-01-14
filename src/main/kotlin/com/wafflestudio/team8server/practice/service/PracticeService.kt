@@ -180,11 +180,13 @@ class PracticeService(
         // 12. 성공 여부 판정
         val isSuccess = distributionUtil.isSuccessful(rank, request.capacity)
 
-        // 13. PracticeDetail 저장 (통계 정보 포함)
+        // 13. PracticeDetail 저장 (통계 정보 포함, Course 정보 복사)
         val practiceDetail =
             PracticeDetail(
                 practiceLog = practiceLog,
                 course = course,
+                courseTitle = course.courseTitle,
+                lectureNumber = course.lectureNumber,
                 isSuccess = isSuccess,
                 reactionTime = userLatencyMs,
                 rank = rank,
@@ -264,12 +266,13 @@ class PracticeService(
         // 4. 성공 횟수 계산
         val successCount = details.count { it.isSuccess }
 
-        // 5. DTO 변환
+        // 5. DTO 변환 (PracticeDetail에 저장된 Course 정보 사용)
         val attempts =
             details.map { detail ->
                 PracticeAttemptResult(
                     courseId = detail.course?.id,
-                    courseTitle = detail.course?.courseTitle,
+                    courseTitle = detail.courseTitle,
+                    lectureNumber = detail.lectureNumber,
                     isSuccess = detail.isSuccess,
                     rank = detail.rank,
                     percentile = detail.percentile,

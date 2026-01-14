@@ -20,6 +20,10 @@ class PracticeDetail(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = true)
     val course: Course?,
+    @Column(name = "course_title", nullable = true, length = 255)
+    val courseTitle: String?,
+    @Column(name = "lecture_number", nullable = true, length = 10)
+    val lectureNumber: String?,
     @Column(name = "is_success", nullable = false)
     val isSuccess: Boolean,
     @Column(name = "reaction_time", nullable = false)
