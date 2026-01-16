@@ -119,6 +119,7 @@ class PreEnrollController(
     )
     @GetMapping
     fun getPreEnrolls(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
         @Parameter(description = "true이면 cartCount > quota 인 항목만 반환", example = "false")
         @RequestParam(required = false, defaultValue = "false")
@@ -205,6 +206,7 @@ class PreEnrollController(
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun addPreEnroll(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
         @Valid @RequestBody request: PreEnrollAddRequest,
     ): PreEnrollCourseResponse = preEnrollService.addPreEnroll(userId, request.courseId)
@@ -256,6 +258,7 @@ class PreEnrollController(
     @DeleteMapping("/{courseId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun deletePreEnroll(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
         @PathVariable courseId: Long,
     ) {
@@ -314,6 +317,7 @@ class PreEnrollController(
     )
     @PatchMapping("/{courseId}/cart-count")
     fun updateCartCount(
+        @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
         @PathVariable courseId: Long,
         @Valid @RequestBody request: PreEnrollUpdateCartCountRequest,
