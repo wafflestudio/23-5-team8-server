@@ -599,7 +599,7 @@ class PracticeControllerTest
                         .content(objectMapper.writeValueAsString(request2)),
                 ).andExpect(status().isOk)
                 .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.message").value("정원이 초과되었습니다"))
+                .andExpect(jsonPath("$.message").value("정원이 초과되었습니다(이미 시도한 강의입니다)"))
 
             // 세션 종료 후 totalAttempts가 1인지 확인
             mockMvc
