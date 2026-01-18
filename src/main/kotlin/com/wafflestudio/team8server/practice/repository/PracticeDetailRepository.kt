@@ -12,4 +12,6 @@ interface PracticeDetailRepository : JpaRepository<PracticeDetail, Long> {
         practiceLogId: Long,
         courseId: Long,
     ): PracticeDetail?
+
+    fun findByPracticeLogIdOrderByIdAsc(practiceLogId: Long): List<PracticeDetail>
 }
