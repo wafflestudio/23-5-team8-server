@@ -2,10 +2,12 @@ package com.wafflestudio.team8server.leaderboard.controller
 
 import com.wafflestudio.team8server.common.auth.LoggedInUserId
 import com.wafflestudio.team8server.common.exception.ErrorResponse
+import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.leaderboard.dto.LeaderboardEntryResponse
 import com.wafflestudio.team8server.leaderboard.dto.LeaderboardTopResponse
 import com.wafflestudio.team8server.leaderboard.dto.MyLeaderboardResponse
 import com.wafflestudio.team8server.leaderboard.service.LeaderboardService
+import com.wafflestudio.team8server.user.repository.UserRepository
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/leaderboard")
 class LeaderboardController(
     private val leaderboardService: LeaderboardService,
+    private val userRepository: UserRepository,
 ) {
     @Operation(
         summary = "상위 n명 리더보드 조회",
@@ -86,7 +89,10 @@ class LeaderboardController(
         return LeaderboardTopResponse(
             topFirstReactionTime =
                 result.topFirstReactionTime.mapNotNull { record ->
-                    val user = record.user
+                    val user =
+                        userRepository
+                            .findById(record.userId)
+                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
                     val value = record.bestFirstReactionTime ?: return@mapNotNull null
                     LeaderboardEntryResponse(
                         userId = user.id ?: return@mapNotNull null,
@@ -97,7 +103,10 @@ class LeaderboardController(
                 },
             topSecondReactionTime =
                 result.topSecondReactionTime.mapNotNull { record ->
-                    val user = record.user
+                    val user =
+                        userRepository
+                            .findById(record.userId)
+                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
                     val value = record.bestSecondReactionTime ?: return@mapNotNull null
                     LeaderboardEntryResponse(
                         userId = user.id ?: return@mapNotNull null,
@@ -108,7 +117,10 @@ class LeaderboardController(
                 },
             topCompetitionRate =
                 result.topCompetitionRate.mapNotNull { record ->
-                    val user = record.user
+                    val user =
+                        userRepository
+                            .findById(record.userId)
+                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
                     val value = record.bestCompetitionRate ?: return@mapNotNull null
                     LeaderboardEntryResponse(
                         userId = user.id ?: return@mapNotNull null,

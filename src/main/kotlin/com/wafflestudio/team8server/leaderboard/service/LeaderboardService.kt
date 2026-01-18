@@ -87,7 +87,6 @@ class LeaderboardService(
         val record =
             existing ?: LeaderboardRecord(
                 userId = userId,
-                user = practiceLog.user,
                 bestFirstReactionTime = null,
                 bestSecondReactionTime = null,
                 bestCompetitionRate = null,
