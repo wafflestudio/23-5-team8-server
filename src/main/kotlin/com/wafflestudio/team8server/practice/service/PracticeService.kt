@@ -13,6 +13,7 @@ import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResult
 import com.wafflestudio.team8server.practice.dto.PracticeEndResponse
 import com.wafflestudio.team8server.practice.dto.PracticeResultResponse
+import com.wafflestudio.team8server.practice.dto.PracticeStartRequest
 import com.wafflestudio.team8server.practice.dto.PracticeStartResponse
 import com.wafflestudio.team8server.practice.model.PracticeDetail
 import com.wafflestudio.team8server.practice.model.PracticeLog
@@ -42,7 +43,10 @@ class PracticeService(
      * - 동시성 제어를 위해 분산 락을 사용합니다.
      */
     @Transactional
-    fun startPractice(userId: Long): PracticeStartResponse {
+    fun startPractice(
+        userId: Long,
+        request: PracticeStartRequest,
+    ): PracticeStartResponse {
         // 1. 분산 락 획득
         val lockAcquired = practiceSessionService.acquireLock(userId)
         if (!lockAcquired) {
@@ -68,19 +72,24 @@ class PracticeService(
             // 5. 세션 시작 시간 가져오기
             val startTimeMs = timeProvider.currentTimeMillis()
 
-            // 6. Redis에 세션 저장 (5분 TTL)
+            // 6. 선택된 시작 시간 옵션에서 offset 가져오기
+            val startTimeOption = request.virtualStartTimeOption
+            val offsetMs = startTimeOption.offsetToTargetMs
+
+            // 7. Redis에 세션 저장 (5분 TTL)
             practiceSessionService.createSession(userId, savedLog.id!!)
             practiceSessionService.saveStartTime(userId, startTimeMs)
+            practiceSessionService.saveStartToTargetOffsetMs(userId, offsetMs)
 
             return PracticeStartResponse(
                 practiceLogId = savedLog.id!!,
-                virtualStartTime = sessionConfig.virtualStartTime,
+                virtualStartTime = startTimeOption.displayTime,
                 targetTime = sessionConfig.targetTime,
                 timeLimit = sessionConfig.timeLimit,
-                message = "연습 세션이 시작되었습니다. 가상 시계가 ${sessionConfig.virtualStartTime} 로 세팅되었습니다.",
+                message = "연습 세션이 시작되었습니다. 가상 시계가 ${startTimeOption.displayTime} 로 세팅되었습니다.",
             )
         } finally {
-            // 7. 락 해제
+            // 8. 락 해제
             practiceSessionService.releaseLock(userId)
         }
     }
@@ -123,16 +132,21 @@ class PracticeService(
             practiceSessionService.getStartTime(userId)
                 ?: throw ResourceNotFoundException("세션 시작 시간을 찾을 수 없습니다")
 
-        // 3. 서버 시간 기반 사용자 지연 시간 계산
-        val currentTimeMs = timeProvider.currentTimeMillis()
-        val userLatencyMs = (currentTimeMs - startTimeMs - sessionConfig.startToTargetOffsetMs).toInt()
+        // 3. 세션별 offset 조회
+        val startToTargetOffsetMs =
+            practiceSessionService.getStartToTargetOffsetMs(userId)
+                ?: throw ResourceNotFoundException("세션 offset 정보를 찾을 수 없습니다")
 
-        // 4. PracticeLog 조회 (기존 세션 사용)
+        // 4. 서버 시간 기반 사용자 지연 시간 계산
+        val currentTimeMs = timeProvider.currentTimeMillis()
+        val userLatencyMs = (currentTimeMs - startTimeMs - startToTargetOffsetMs).toInt()
+
+        // 5. PracticeLog 조회 (기존 세션 사용)
         val practiceLog =
             practiceLogRepository.findByIdOrNull(practiceLogId)
                 ?: throw ResourceNotFoundException("연습 세션을 찾을 수 없습니다")
 
-        // 5. Early Click 처리 (targetTime 기준 0ms 이하)
+        // 6. Early Click 처리 (targetTime 기준 0ms 이하)
         if (userLatencyMs <= 0) {
             return handleEarlyClick(
                 userLatencyMs = userLatencyMs,
@@ -140,12 +154,12 @@ class PracticeService(
             )
         }
 
-        // 6. Course 존재 여부 검증
+        // 7. Course 존재 여부 검증
         val course =
             courseRepository.findByIdOrNull(request.courseId)
                 ?: throw ResourceNotFoundException("강의를 찾을 수 없습니다 (ID: ${request.courseId})")
 
-        // 7. 중복 시도 체크 (log_id, course_id)
+        // 8. 중복 시도 체크 (log_id, course_id)
         val existingDetail = practiceDetailRepository.findByPracticeLogIdAndCourseId(practiceLogId, request.courseId)
         if (existingDetail != null) {
             // 이미 시도한 과목
@@ -161,26 +175,26 @@ class PracticeService(
             )
         }
 
-        // 8. 교과분류 기반 분포 파라미터 결정
+        // 9. 교과분류 기반 분포 파라미터 결정
         val distributionParams = distributionConfig.getParamsForClassification(course.classification)
 
-        // 9. 로그정규분포 계산
+        // 10. 로그정규분포 계산
         val distributionUtil =
             LogNormalDistributionUtil(
                 scale = distributionParams.scale,
                 shape = distributionParams.shape,
             )
 
-        // 10. 백분위(Percentile) 계산
+        // 11. 백분위(Percentile) 계산
         val percentile = distributionUtil.calculatePercentile(userLatencyMs)
 
-        // 11. 등수(Rank) 산출
+        // 12. 등수(Rank) 산출
         val rank = distributionUtil.calculateRank(percentile, request.totalCompetitors)
 
-        // 12. 성공 여부 판정
+        // 13. 성공 여부 판정
         val isSuccess = distributionUtil.isSuccessful(rank, request.capacity)
 
-        // 13. PracticeDetail 저장 (통계 정보 포함, Course 정보 복사)
+        // 14. PracticeDetail 저장 (통계 정보 포함, Course 정보 복사)
         val practiceDetail =
             PracticeDetail(
                 practiceLog = practiceLog,
@@ -198,7 +212,7 @@ class PracticeService(
             )
         practiceDetailRepository.save(practiceDetail)
 
-        // 14. 응답 반환 (간소화)
+        // 15. 응답 반환 (간소화)
         val message =
             if (isSuccess) {
                 "수강신청에 성공했습니다"

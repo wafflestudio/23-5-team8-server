@@ -21,6 +21,7 @@ class PracticeSessionService(
         private const val SESSION_KEY_PREFIX = "practice:session:"
         private const val SESSION_LOCK_KEY_SUFFIX = ":lock"
         private const val SESSION_START_TIME_SUFFIX = ":startTime"
+        private const val SESSION_OFFSET_SUFFIX = ":offset"
     }
 
     /**
@@ -145,6 +146,37 @@ class PracticeSessionService(
     fun getStartTime(userId: Long): Long? {
         val startTimeKey = SESSION_KEY_PREFIX + userId + SESSION_START_TIME_SUFFIX
         val value = redisTemplate.opsForValue().get(startTimeKey)
+        return value?.toLongOrNull()
+    }
+
+    /**
+     * 시작 시간과 수강신청 오픈 시간 사이의 offset을 저장합니다.
+     *
+     * @param userId 사용자 ID
+     * @param offsetMs offset (밀리초)
+     */
+    fun saveStartToTargetOffsetMs(
+        userId: Long,
+        offsetMs: Long,
+    ) {
+        val offsetKey = SESSION_KEY_PREFIX + userId + SESSION_OFFSET_SUFFIX
+        redisTemplate.opsForValue().set(
+            offsetKey,
+            offsetMs.toString(),
+            config.timeLimitSeconds,
+            TimeUnit.SECONDS,
+        )
+    }
+
+    /**
+     * 시작 시간과 수강신청 오픈 시간 사이의 offset을 조회합니다.
+     *
+     * @param userId 사용자 ID
+     * @return offset (밀리초), 없으면 null
+     */
+    fun getStartToTargetOffsetMs(userId: Long): Long? {
+        val offsetKey = SESSION_KEY_PREFIX + userId + SESSION_OFFSET_SUFFIX
+        val value = redisTemplate.opsForValue().get(offsetKey)
         return value?.toLongOrNull()
     }
 }
