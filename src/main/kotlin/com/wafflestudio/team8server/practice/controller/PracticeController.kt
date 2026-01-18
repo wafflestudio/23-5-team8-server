@@ -2,6 +2,7 @@ package com.wafflestudio.team8server.practice.controller
 
 import com.wafflestudio.team8server.common.auth.LoggedInUserId
 import com.wafflestudio.team8server.common.exception.ErrorResponse
+import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
 import com.wafflestudio.team8server.practice.dto.PracticeEndResponse
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/practice")
 class PracticeController(
     private val practiceService: PracticeService,
+    private val sessionConfig: PracticeSessionConfig,
 ) {
     @Operation(
         summary = "연습 세션 시작",
@@ -69,7 +71,7 @@ class PracticeController(
                                       "practiceLogId": 42,
                                       "virtualStartTime": "08:29:30",
                                       "targetTime": "08:30:00",
-                                      "timeLimit": "08:34:30",
+                                      "timeLimitSeconds": 300,
                                       "message": "연습 세션이 시작되었습니다. 가상 시계가 08:29:30 로 세팅되었습니다."
                                     }
                                     """,
@@ -164,7 +166,10 @@ class PracticeController(
         @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
         @RequestBody(required = false) request: PracticeStartRequest?,
-    ): PracticeStartResponse = practiceService.startPractice(userId, request ?: PracticeStartRequest())
+    ): PracticeStartResponse {
+        val startTimeOption = request?.virtualStartTimeOption ?: sessionConfig.defaultStartTimeOption
+        return practiceService.startPractice(userId, startTimeOption)
+    }
 
     @Operation(
         summary = "연습 세션 종료",

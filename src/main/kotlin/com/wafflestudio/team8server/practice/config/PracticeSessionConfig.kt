@@ -1,8 +1,7 @@
 package com.wafflestudio.team8server.practice.config
 
+import com.wafflestudio.team8server.practice.dto.VirtualStartTimeOption
 import org.springframework.boot.context.properties.ConfigurationProperties
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 
 /**
  * 수강신청 연습 세션 설정
@@ -13,10 +12,10 @@ import java.time.format.DateTimeFormatter
 @ConfigurationProperties(prefix = "practice.session")
 class PracticeSessionConfig {
     /**
-     * 연습 시작 시각 (HH:mm:ss 형식)
+     * 기본 시작 시간 옵션
      * application.yml에서 설정 필수
      */
-    lateinit var virtualStartTime: String
+    lateinit var defaultStartTimeOption: VirtualStartTimeOption
 
     /**
      * 수강신청 오픈 시각 (HH:mm:ss 형식)
@@ -53,27 +52,4 @@ class PracticeSessionConfig {
      */
     val timeLimitMs: Long
         get() = timeLimitSeconds * 1000
-
-    /**
-     * 연습 종료 시각 (HH:mm:ss 형식)
-     * virtualStartTime + timeLimitSeconds로 계산됩니다.
-     */
-    val timeLimit: String
-        get() {
-            val startTime = LocalTime.parse(virtualStartTime, DateTimeFormatter.ofPattern("HH:mm:ss"))
-            val endTime = startTime.plusSeconds(timeLimitSeconds)
-            return endTime.format(DateTimeFormatter.ofPattern("HH:mm:ss"))
-        }
-
-    /**
-     * 시작 시각과 오픈 시각 간의 차이 (밀리초)
-     */
-    val startToTargetOffsetMs: Long
-        get() {
-            val start = LocalTime.parse(virtualStartTime, DateTimeFormatter.ofPattern("HH:mm:ss"))
-            val target = LocalTime.parse(targetTime, DateTimeFormatter.ofPattern("HH:mm:ss"))
-            return java.time.Duration
-                .between(start, target)
-                .toMillis()
-        }
 }

@@ -13,8 +13,8 @@ import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResult
 import com.wafflestudio.team8server.practice.dto.PracticeEndResponse
 import com.wafflestudio.team8server.practice.dto.PracticeResultResponse
-import com.wafflestudio.team8server.practice.dto.PracticeStartRequest
 import com.wafflestudio.team8server.practice.dto.PracticeStartResponse
+import com.wafflestudio.team8server.practice.dto.VirtualStartTimeOption
 import com.wafflestudio.team8server.practice.model.PracticeDetail
 import com.wafflestudio.team8server.practice.model.PracticeLog
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
@@ -45,7 +45,7 @@ class PracticeService(
     @Transactional
     fun startPractice(
         userId: Long,
-        request: PracticeStartRequest,
+        startTimeOption: VirtualStartTimeOption,
     ): PracticeStartResponse {
         // 1. 분산 락 획득
         val lockAcquired = practiceSessionService.acquireLock(userId)
@@ -73,7 +73,6 @@ class PracticeService(
             val startTimeMs = timeProvider.currentTimeMillis()
 
             // 6. 선택된 시작 시간 옵션에서 offset 가져오기
-            val startTimeOption = request.virtualStartTimeOption
             val offsetMs = startTimeOption.offsetToTargetMs
 
             // 7. Redis에 세션 저장 (5분 TTL)
@@ -85,7 +84,7 @@ class PracticeService(
                 practiceLogId = savedLog.id!!,
                 virtualStartTime = startTimeOption.displayTime,
                 targetTime = sessionConfig.targetTime,
-                timeLimit = sessionConfig.timeLimit,
+                timeLimitSeconds = sessionConfig.timeLimitSeconds,
                 message = "연습 세션이 시작되었습니다. 가상 시계가 ${startTimeOption.displayTime} 로 세팅되었습니다.",
             )
         } finally {

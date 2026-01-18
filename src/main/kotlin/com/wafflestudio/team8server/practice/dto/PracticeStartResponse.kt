@@ -4,6 +4,6 @@ data class PracticeStartResponse(
     val practiceLogId: Long,
     val virtualStartTime: String,
     val targetTime: String,
-    val timeLimit: String,
+    val timeLimitSeconds: Long,
     val message: String,
 )
