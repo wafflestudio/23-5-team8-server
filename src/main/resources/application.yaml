@@ -40,7 +40,7 @@ oauth:
 practice:
   # 세션 관련 설정
   session:
-    virtual-start-time: "08:28:00"      # 연습 시작 시각
+    default-start-time-option: TIME_08_29_30  # 기본 시작 시간 옵션 (TIME_08_29_00, TIME_08_29_30, TIME_08_29_45)
     target-time: "08:30:00"              # 수강신청 오픈 시각
     time-limit-seconds: 300              # 연습 제한 시간 (초)
     early-click-recording-window-ms: 1000 # Early click 기록 범위 (ms) - 이 값 이내로 일찍 클릭한 경우 DB에 기록
@@ -49,5 +49,5 @@ practice:
   # 로그정규분포 파라미터 설정
   distribution:
     default:
-      scale: 5.0                         # μ (mu) - 로그정규분포의 scale 파라미터
+      scale: 9.0                        # μ (mu) - 로그정규분포의 scale 파라미터
       shape: 0.5                         # σ (sigma) - 로그정규분포의 shape 파라미터

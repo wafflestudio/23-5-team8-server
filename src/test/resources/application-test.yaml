@@ -15,10 +15,10 @@ jwt:
 # 수강신청 연습 설정 (테스트용)
 practice:
   session:
-    virtual-start-time: "08:28:00"
+    default-start-time-option: TIME_08_29_30
     target-time: "08:30:00"
     time-limit-seconds: 300
-    early-click-recording-window-ms: 5000  # Early click 기록 범위 (ms)
+    early-click-recording-window-ms: 1000  # Early click 기록 범위 (ms)
     lock-ttl-seconds: 10  # 서버 크래시 시 안전장치
   distribution:
     default:

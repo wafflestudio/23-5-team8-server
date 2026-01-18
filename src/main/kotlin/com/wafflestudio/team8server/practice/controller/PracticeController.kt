@@ -2,10 +2,12 @@ package com.wafflestudio.team8server.practice.controller
 
 import com.wafflestudio.team8server.common.auth.LoggedInUserId
 import com.wafflestudio.team8server.common.exception.ErrorResponse
+import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
 import com.wafflestudio.team8server.practice.dto.PracticeEndResponse
 import com.wafflestudio.team8server.practice.dto.PracticeResultResponse
+import com.wafflestudio.team8server.practice.dto.PracticeStartRequest
 import com.wafflestudio.team8server.practice.dto.PracticeStartResponse
 import com.wafflestudio.team8server.practice.service.PracticeService
 import io.swagger.v3.oas.annotations.Operation
@@ -32,13 +34,23 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/practice")
 class PracticeController(
     private val practiceService: PracticeService,
+    private val sessionConfig: PracticeSessionConfig,
 ) {
     @Operation(
         summary = "연습 세션 시작",
         description =
-            "수강신청 연습 세션을 시작합니다. " +
-                "PracticeLog를 생성하고 Redis에 세션 정보를 저장합니다(5분 TTL). " +
-                "이미 진행 중인 세션이 있으면 409 에러가 반환됩니다.",
+            """
+            수강신청 연습 세션을 시작합니다.
+            PracticeLog를 생성하고 Redis에 세션 정보를 저장합니다(5분 TTL).
+            이미 진행 중인 세션이 있으면 409 에러가 반환됩니다.
+
+            **시작 시간 옵션:**
+            - TIME_08_29_00: 08:29:00 시작 (수강신청 오픈 1분 전)
+            - TIME_08_29_30: 08:29:30 시작 (수강신청 오픈 30초 전) - 기본값
+            - TIME_08_29_45: 08:29:45 시작 (수강신청 오픈 15초 전)
+
+            요청 바디를 생략하면 기본값(TIME_08_29_30)이 사용됩니다.
+            """,
         security = [SecurityRequirement(name = "Bearer Authentication")],
     )
     @ApiResponses(
@@ -57,10 +69,10 @@ class PracticeController(
                                     """
                                     {
                                       "practiceLogId": 42,
-                                      "virtualStartTime": "08:28:00",
+                                      "virtualStartTime": "08:29:30",
                                       "targetTime": "08:30:00",
-                                      "timeLimit": "08:33:00",
-                                      "message": "연습 세션이 시작되었습니다. 가상 시계가 08:28:00 로 세팅되었습니다."
+                                      "timeLimitSeconds": 300,
+                                      "message": "연습 세션이 시작되었습니다. 가상 시계가 08:29:30 로 세팅되었습니다."
                                     }
                                     """,
                             ),
@@ -122,12 +134,42 @@ class PracticeController(
             ),
         ],
     )
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "연습 세션 시작 요청 (생략 시 기본값 사용)",
+        required = false,
+        content = [
+            Content(
+                schema = Schema(implementation = PracticeStartRequest::class),
+                examples = [
+                    ExampleObject(
+                        name = "default",
+                        summary = "30초 전 시작(기본값)",
+                        value = """{"virtualStartTimeOption": "TIME_08_29_30"}""",
+                    ),
+                    ExampleObject(
+                        name = "1-minute-before",
+                        summary = "1분 전 시작",
+                        value = """{"virtualStartTimeOption": "TIME_08_29_00"}""",
+                    ),
+                    ExampleObject(
+                        name = "15-seconds-before",
+                        summary = "15초 전 시작",
+                        value = """{"virtualStartTimeOption": "TIME_08_29_45"}""",
+                    ),
+                ],
+            ),
+        ],
+    )
     @PostMapping("/start")
     @ResponseStatus(HttpStatus.CREATED)
     fun startPractice(
         @Parameter(hidden = true)
         @LoggedInUserId userId: Long,
-    ): PracticeStartResponse = practiceService.startPractice(userId)
+        @RequestBody(required = false) request: PracticeStartRequest?,
+    ): PracticeStartResponse {
+        val startTimeOption = request?.virtualStartTimeOption ?: sessionConfig.defaultStartTimeOption
+        return practiceService.startPractice(userId, startTimeOption)
+    }
 
     @Operation(
         summary = "연습 세션 종료",
@@ -229,9 +271,9 @@ class PracticeController(
             로그정규분포를 사용하여 수강신청 성공/실패를 시뮬레이션합니다.
 
             **시뮬레이션 환경:**
-            - 연습 시작 시간: 08:28:00 (가상 시계)
+            - 연습 시작 시간: 사용자 선택 (08:29:00, 08:29:30, 08:29:45)
             - 수강신청 오픈 시간: 08:30:00 (targetTime)
-            - 연습 종료 시간: 08:33:00 (5분 후 Redis 세션 자동 만료)
+            - 연습 종료 시간: 연습 시작 시간 + 5분
 
             **처리 흐름:**
             1. 활성 세션 확인: Redis에 활성 세션이 있는지 확인
@@ -326,7 +368,7 @@ class PracticeController(
                                     """
                                     {
                                       "isSuccess": false,
-                                      "message": "정원이 초과되었습니다"
+                                      "message": "정원이 초과되었습니다(이미 시도한 강의입니다)"
                                     }
                                     """,
                             ),
