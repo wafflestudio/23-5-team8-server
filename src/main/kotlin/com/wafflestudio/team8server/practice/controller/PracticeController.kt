@@ -143,7 +143,7 @@ class PracticeController(
                 examples = [
                     ExampleObject(
                         name = "default",
-                        summary = "기본값 (08:29:30)",
+                        summary = "30초 전 시작(기본값)",
                         value = """{"virtualStartTimeOption": "TIME_08_29_30"}""",
                     ),
                     ExampleObject(
@@ -271,9 +271,9 @@ class PracticeController(
             로그정규분포를 사용하여 수강신청 성공/실패를 시뮬레이션합니다.
 
             **시뮬레이션 환경:**
-            - 연습 시작 시간: 08:28:00 (가상 시계)
+            - 연습 시작 시간: 사용자 선택 (08:29:00, 08:29:30, 08:29:45)
             - 수강신청 오픈 시간: 08:30:00 (targetTime)
-            - 연습 종료 시간: 08:33:00 (5분 후 Redis 세션 자동 만료)
+            - 연습 종료 시간: 연습 시작 시간 + 5분
 
             **처리 흐름:**
             1. 활성 세션 확인: Redis에 활성 세션이 있는지 확인
@@ -368,7 +368,7 @@ class PracticeController(
                                     """
                                     {
                                       "isSuccess": false,
-                                      "message": "정원이 초과되었습니다"
+                                      "message": "정원이 초과되었습니다(이미 시도한 강의입니다)"
                                     }
                                     """,
                             ),

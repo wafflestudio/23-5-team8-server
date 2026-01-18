@@ -166,11 +166,12 @@ class PracticeService(
                 if (existingDetail.isSuccess) {
                     "이미 수강신청된 강의입니다"
                 } else {
-                    "정원이 초과되었습니다"
+                    "정원이 초과되었습니다(이미 시도한 강의입니다)"
                 }
             return PracticeAttemptResponse(
                 isSuccess = existingDetail.isSuccess,
                 message = message,
+                userLatencyMs = userLatencyMs
             )
         }
 
@@ -222,6 +223,7 @@ class PracticeService(
         return PracticeAttemptResponse(
             isSuccess = isSuccess,
             message = message,
+            userLatencyMs = userLatencyMs,
         )
     }
 
@@ -250,6 +252,7 @@ class PracticeService(
         return PracticeAttemptResponse(
             isSuccess = false,
             message = "수강신청 기간이 아닙니다",
+            userLatencyMs = userLatencyMs,
         )
     }
 
