@@ -171,7 +171,7 @@ class PracticeService(
             return PracticeAttemptResponse(
                 isSuccess = existingDetail.isSuccess,
                 message = message,
-                userLatencyMs = userLatencyMs
+                userLatencyMs = userLatencyMs,
             )
         }
 
