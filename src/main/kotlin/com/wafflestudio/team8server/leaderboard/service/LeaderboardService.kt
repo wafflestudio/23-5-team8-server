@@ -23,8 +23,11 @@ class LeaderboardService(
 
     data class MyLeaderboardResult(
         val bestFirstReactionTime: Int?,
+        val bestFirstReactionTimeRank: Long?,
         val bestSecondReactionTime: Int?,
+        val bestSecondReactionTimeRank: Long?,
         val bestCompetitionRate: Double?,
+        val bestCompetitionRateRank: Long?,
     )
 
     @Transactional(readOnly = true)
@@ -43,10 +46,20 @@ class LeaderboardService(
     fun getMyResult(userId: Long): MyLeaderboardResult {
         val record = leaderboardRecordRepository.findByUserId(userId)
 
+        val first = record?.bestFirstReactionTime
+        val second = record?.bestSecondReactionTime
+        val rate = record?.bestCompetitionRate
+        val firstRank = first?.let { leaderboardRecordRepository.countBetterFirstReactionTime(it) + 1 }
+        val secondRank = second?.let { leaderboardRecordRepository.countBetterSecondReactionTime(it) + 1 }
+        val rateRank = rate?.let { leaderboardRecordRepository.countBetterCompetitionRate(it) + 1 }
+
         return MyLeaderboardResult(
-            bestFirstReactionTime = record?.bestFirstReactionTime,
-            bestSecondReactionTime = record?.bestSecondReactionTime,
-            bestCompetitionRate = record?.bestCompetitionRate,
+            bestFirstReactionTime = first,
+            bestFirstReactionTimeRank = firstRank,
+            bestSecondReactionTime = second,
+            bestSecondReactionTimeRank = secondRank,
+            bestCompetitionRate = rate,
+            bestCompetitionRateRank = rateRank,
         )
     }
 

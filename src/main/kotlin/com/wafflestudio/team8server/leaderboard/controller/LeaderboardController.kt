@@ -197,8 +197,11 @@ class LeaderboardController(
 
         return MyLeaderboardResponse(
             bestFirstReactionTime = result.bestFirstReactionTime,
+            bestFirstReactionTimeRank = result.bestFirstReactionTimeRank,
             bestSecondReactionTime = result.bestSecondReactionTime,
+            bestSecondReactionTimeRank = result.bestSecondReactionTimeRank,
             bestCompetitionRate = result.bestCompetitionRate,
+            bestCompetitionRateRank = result.bestCompetitionRateRank,
         )
     }
 }
