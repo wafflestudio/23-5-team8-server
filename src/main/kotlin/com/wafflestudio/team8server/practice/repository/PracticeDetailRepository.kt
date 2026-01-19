@@ -13,5 +13,10 @@ interface PracticeDetailRepository : JpaRepository<PracticeDetail, Long> {
         courseId: Long,
     ): PracticeDetail?
 
+    fun countByPracticeLogIdAndIsSuccess(
+        practiceLogId: Long,
+        isSuccess: Boolean,
+    ): Long
+
     fun findByPracticeLogIdOrderByIdAsc(practiceLogId: Long): List<PracticeDetail>
 }

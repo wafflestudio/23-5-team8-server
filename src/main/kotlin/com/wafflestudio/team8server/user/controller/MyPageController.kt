@@ -2,6 +2,8 @@ package com.wafflestudio.team8server.user.controller
 
 import com.wafflestudio.team8server.common.auth.LoggedInUserId
 import com.wafflestudio.team8server.common.exception.ErrorResponse
+import com.wafflestudio.team8server.practice.dto.PracticeResultResponse
+import com.wafflestudio.team8server.practice.dto.PracticeSessionListResponse
 import com.wafflestudio.team8server.user.dto.ChangePasswordRequest
 import com.wafflestudio.team8server.user.dto.MyPageResponse
 import com.wafflestudio.team8server.user.dto.UpdateProfileRequest
@@ -19,8 +21,10 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
@@ -222,4 +226,65 @@ class MyPageController(
         @Parameter(hidden = true) @LoggedInUserId userId: Long,
         @Valid @RequestBody request: ChangePasswordRequest,
     ) = myPageService.changePassword(userId, request)
+
+    @Operation(
+        summary = "연습 세션 목록 조회",
+        description = "사용자의 연습 세션 목록을 페이지네이션으로 조회합니다. 최신순 정렬됩니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "조회 성공",
+                content = [Content(schema = Schema(implementation = PracticeSessionListResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "인증 실패",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    @GetMapping("/practice-sessions")
+    @ResponseStatus(HttpStatus.OK)
+    fun getPracticeSessions(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+        @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+        @RequestParam(defaultValue = "0") page: Int,
+        @Parameter(description = "페이지 크기", example = "10")
+        @RequestParam(defaultValue = "10") size: Int,
+    ): PracticeSessionListResponse = myPageService.getPracticeSessions(userId, page, size)
+
+    @Operation(
+        summary = "연습 세션 상세 조회",
+        description = """
+            특정 연습 세션의 상세 결과를 조회합니다.
+            본인의 연습 기록만 조회할 수 있습니다.
+        """,
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "조회 성공",
+                content = [Content(schema = Schema(implementation = PracticeResultResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "인증 실패 또는 다른 사용자의 기록 접근",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "세션을 찾을 수 없음",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    @GetMapping("/practice-sessions/{practiceLogId}")
+    @ResponseStatus(HttpStatus.OK)
+    fun getPracticeSessionDetail(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+        @Parameter(description = "연습 세션 ID") @PathVariable practiceLogId: Long,
+    ): PracticeResultResponse = myPageService.getPracticeSessionDetail(userId, practiceLogId)
 }
