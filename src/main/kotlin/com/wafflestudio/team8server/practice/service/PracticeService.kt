@@ -9,6 +9,7 @@ import com.wafflestudio.team8server.common.extension.ensureNotNull
 import com.wafflestudio.team8server.common.time.TimeProvider
 import com.wafflestudio.team8server.course.dto.CourseDetailResponse
 import com.wafflestudio.team8server.course.repository.CourseRepository
+import com.wafflestudio.team8server.leaderboard.service.LeaderboardService
 import com.wafflestudio.team8server.practice.config.PracticeDistributionConfig
 import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
@@ -39,8 +40,10 @@ class PracticeService(
     private val sessionConfig: PracticeSessionConfig,
     private val distributionConfig: PracticeDistributionConfig,
     private val timeProvider: TimeProvider,
-    private val objectMapper: ObjectMapper,
+    private val leaderboardService: LeaderboardService,
 ) {
+    private val objectMapper: ObjectMapper = ObjectMapper()
+
     /**
      * 수강신청 연습 세션을 시작합니다.
      * - PracticeLog를 생성하고 Redis에 세션을 저장합니다.
@@ -102,7 +105,7 @@ class PracticeService(
      * 수강신청 연습 세션을 종료합니다.
      * - Redis에서 세션을 삭제합니다.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     fun endPractice(userId: Long): PracticeEndResponse {
         // 1. 활성 세션 확인
         val practiceLogId =
@@ -111,6 +114,16 @@ class PracticeService(
 
         // 2. 해당 세션의 시도 횟수 조회
         val totalAttempts = practiceDetailRepository.countByPracticeLogId(practiceLogId)
+
+        // 2.1. 세션을 삭제하기 전에 리더보드 갱신
+        leaderboardService.updateByPracticeEnd(
+            userId = userId,
+            practiceLogId = practiceLogId,
+        )
+        leaderboardService.updateWeeklyByPracticeEnd(
+            userId = userId,
+            practiceLogId = practiceLogId,
+        )
 
         // 3. Redis에서 세션 삭제
         practiceSessionService.endSession(userId)

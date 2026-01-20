@@ -14,6 +14,14 @@ class ResourceNotFoundException(
         errorCode = "RESOURCE_NOT_FOUND",
     )
 
+// 리소스에 대한 접근이 금지된 경우의 예외
+class ResourceForbiddenException(
+    message: String,
+) : BusinessException(
+        message = message,
+        errorCode = "RESOURCE_FORBIDDEN",
+    )
+
 // 이메일 중복 예외
 class DuplicateEmailException(
     email: String,
