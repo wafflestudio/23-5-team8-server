@@ -3,6 +3,7 @@ package com.wafflestudio.team8server.user.service
 import com.wafflestudio.team8server.common.exception.DuplicateEmailException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
 import com.wafflestudio.team8server.common.extension.ensureNotNull
+import com.wafflestudio.team8server.practice.service.PracticeService
 import com.wafflestudio.team8server.user.JwtTokenProvider
 import com.wafflestudio.team8server.user.dto.LoginRequest
 import com.wafflestudio.team8server.user.dto.LoginResponse
@@ -24,6 +25,7 @@ class AuthService(
     private val passwordEncoder: PasswordEncoder,
     private val jwtTokenProvider: JwtTokenProvider,
     private val tokenBlacklistService: TokenBlacklistService,
+    private val practiceService: PracticeService,
 ) {
     @Transactional
     fun signup(request: SignupRequest): SignupResponse {
@@ -88,10 +90,14 @@ class AuthService(
             throw UnauthorizedException("유효하지 않은 토큰입니다")
         }
 
-        // 2. 토큰의 남은 유효 시간 계산
+        // 2. 연습 세션이 있으면 종료
+        val userId = jwtTokenProvider.getUserIdFromToken(token)
+        practiceService.endPracticeInternal(userId)
+
+        // 3. 토큰의 남은 유효 시간 계산
         val remainingTime = jwtTokenProvider.getRemainingExpirationTime(token)
 
-        // 3. 토큰을 블랙리스트에 추가
+        // 4. 토큰을 블랙리스트에 추가
         tokenBlacklistService.addToBlacklist(token, remainingTime)
     }
 }

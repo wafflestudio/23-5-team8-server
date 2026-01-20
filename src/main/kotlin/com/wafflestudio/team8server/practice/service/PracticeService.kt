@@ -41,7 +41,7 @@ class PracticeService(
     /**
      * 수강신청 연습 세션을 시작합니다.
      * - PracticeLog를 생성하고 Redis에 세션을 저장합니다.
-     * - 이미 활성 세션이 있으면 예외를 발생시킵니다.
+     * - 이미 활성 세션이 있으면 기존 세션을 종료하고 새로 시작합니다.
      * - 동시성 제어를 위해 분산 락을 사용합니다.
      */
     @Transactional
@@ -56,9 +56,9 @@ class PracticeService(
         }
 
         try {
-            // 2. 이미 활성 세션이 있는지 확인
+            // 2. 이미 활성 세션이 있으면 종료
             if (practiceSessionService.hasActiveSession(userId)) {
-                throw ActiveSessionExistsException()
+                endPracticeInternal(userId)
             }
 
             // 3. 사용자 조회
@@ -126,6 +126,29 @@ class PracticeService(
             message = "연습 세션이 종료되었습니다.",
             totalAttempts = totalAttempts.toInt(),
         )
+    }
+
+    /**
+     * 내부용 세션 종료 메서드.
+     * - 세션이 없으면 아무 작업도 하지 않습니다.
+     * - startPractice, logout 등에서 사용됩니다.
+     */
+    @Transactional
+    fun endPracticeInternal(userId: Long) {
+        val practiceLogId = practiceSessionService.getActiveSession(userId) ?: return
+
+        // 리더보드 갱신
+        leaderboardService.updateByPracticeEnd(
+            userId = userId,
+            practiceLogId = practiceLogId,
+        )
+        leaderboardService.updateWeeklyByPracticeEnd(
+            userId = userId,
+            practiceLogId = practiceLogId,
+        )
+
+        // Redis에서 세션 삭제
+        practiceSessionService.endSession(userId)
     }
 
     @Transactional

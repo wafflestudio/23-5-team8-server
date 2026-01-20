@@ -192,26 +192,50 @@ class PracticeControllerTest
         }
 
         @Test
-        @DisplayName("이미 진행 중인 세션이 있을 때 세션 시작 실패")
-        fun `start practice session fails when active session exists`() {
+        @DisplayName("이미 진행 중인 세션이 있을 때 세션 시작하면 기존 세션 종료 후 새 세션 시작")
+        fun `start practice with existing session ends old session and starts new one`() {
             val token = signupAndGetToken()
 
             // 첫 번째 세션 시작
-            mockMvc
-                .perform(
-                    post("/api/practice/start")
-                        .header("Authorization", "Bearer $token"),
-                ).andDo(failOn5xx())
+            val firstResponse =
+                mockMvc
+                    .perform(
+                        post("/api/practice/start")
+                            .header("Authorization", "Bearer $token"),
+                    ).andDo(failOn5xx())
+                    .andExpect(status().isCreated)
+                    .andReturn()
 
-            // 두 번째 세션 시작 시도 (실패해야 함)
-            mockMvc
-                .perform(
-                    post("/api/practice/start")
-                        .header("Authorization", "Bearer $token"),
-                ).andDo(failOn5xx())
-                .andExpect(status().isConflict) // 409
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.errorCode").value("ACTIVE_SESSION_EXISTS"))
+            val firstPracticeLogId =
+                objectMapper
+                    .readTree(firstResponse.response.contentAsString)
+                    .get("practiceLogId")
+                    .asLong()
+
+            // 두 번째 세션 시작 (기존 세션 종료 후 새 세션 시작)
+            val secondResponse =
+                mockMvc
+                    .perform(
+                        post("/api/practice/start")
+                            .header("Authorization", "Bearer $token"),
+                    ).andDo(failOn5xx())
+                    .andExpect(status().isCreated)
+                    .andExpect(jsonPath("$.practiceLogId").isNumber)
+                    .andExpect(jsonPath("$.virtualStartTime").value("08:29:30"))
+                    .andExpect(jsonPath("$.targetTime").value("08:30:00"))
+                    .andExpect(jsonPath("$.message").exists())
+                    .andReturn()
+
+            val secondPracticeLogId =
+                objectMapper
+                    .readTree(secondResponse.response.contentAsString)
+                    .get("practiceLogId")
+                    .asLong()
+
+            // 새로운 세션이 생성되었는지 확인
+            assert(firstPracticeLogId != secondPracticeLogId) {
+                "새로운 세션이 생성되어야 합니다 (first: $firstPracticeLogId, second: $secondPracticeLogId)"
+            }
         }
 
         @Test
