@@ -1,10 +1,13 @@
 package com.wafflestudio.team8server.practice.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.wafflestudio.team8server.common.exception.ActiveSessionExistsException
 import com.wafflestudio.team8server.common.exception.NoActiveSessionException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
+import com.wafflestudio.team8server.common.extension.ensureNotNull
 import com.wafflestudio.team8server.common.time.TimeProvider
+import com.wafflestudio.team8server.course.dto.CourseDetailResponse
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.practice.config.PracticeDistributionConfig
 import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
@@ -20,6 +23,7 @@ import com.wafflestudio.team8server.practice.model.PracticeLog
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
 import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
 import com.wafflestudio.team8server.practice.util.LogNormalDistributionUtil
+import com.wafflestudio.team8server.preenroll.util.CourseScheduleUtil
 import com.wafflestudio.team8server.user.repository.UserRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -35,6 +39,7 @@ class PracticeService(
     private val sessionConfig: PracticeSessionConfig,
     private val distributionConfig: PracticeDistributionConfig,
     private val timeProvider: TimeProvider,
+    private val objectMapper: ObjectMapper,
 ) {
     /**
      * 수강신청 연습 세션을 시작합니다.
@@ -175,26 +180,49 @@ class PracticeService(
             )
         }
 
-        // 9. 교과분류 기반 분포 파라미터 결정
+        // 9. 시간 중복 검증 (이미 성공한 강의들과 비교)
+        val enrolledCourses =
+            practiceDetailRepository
+                .findByPracticeLogId(practiceLogId)
+                .filter { it.isSuccess && it.course != null }
+                .mapNotNull { it.course }
+
+        for (enrolledCourse in enrolledCourses) {
+            val hasConflict =
+                CourseScheduleUtil.hasTimeConflict(
+                    objectMapper = objectMapper,
+                    placeAndTimeJsonA = enrolledCourse.placeAndTime,
+                    placeAndTimeJsonB = course.placeAndTime,
+                )
+            if (hasConflict) {
+                return PracticeAttemptResponse(
+                    isSuccess = false,
+                    message = "시간이 겹치는 강의는 수강신청할 수 없습니다",
+                    userLatencyMs = userLatencyMs,
+                )
+            }
+        }
+
+        // 10. 교과분류 기반 분포 파라미터 결정
         val distributionParams = distributionConfig.getParamsForClassification(course.classification)
 
-        // 10. 로그정규분포 계산
+        // 11. 로그정규분포 계산
         val distributionUtil =
             LogNormalDistributionUtil(
                 scale = distributionParams.scale,
                 shape = distributionParams.shape,
             )
 
-        // 11. 백분위(Percentile) 계산
+        // 12. 백분위(Percentile) 계산
         val percentile = distributionUtil.calculatePercentile(userLatencyMs)
 
-        // 12. 등수(Rank) 산출
+        // 13. 등수(Rank) 산출
         val rank = distributionUtil.calculateRank(percentile, request.totalCompetitors)
 
-        // 13. 성공 여부 판정
+        // 14. 성공 여부 판정
         val isSuccess = distributionUtil.isSuccessful(rank, request.capacity)
 
-        // 14. PracticeDetail 저장 (통계 정보 포함, Course 정보 복사)
+        // 15. PracticeDetail 저장 (통계 정보 포함, Course 정보 복사)
         val practiceDetail =
             PracticeDetail(
                 practiceLog = practiceLog,
@@ -212,7 +240,7 @@ class PracticeService(
             )
         practiceDetailRepository.save(practiceDetail)
 
-        // 15. 응답 반환 (간소화)
+        // 16. 응답 반환 (간소화)
         val message =
             if (isSuccess) {
                 "수강신청에 성공했습니다"
@@ -304,5 +332,49 @@ class PracticeService(
             successCount = successCount,
             attempts = attempts,
         )
+    }
+
+    /**
+     * 가장 최근 연습 세션에서 성공한 강의 목록을 조회합니다.
+     */
+    @Transactional(readOnly = true)
+    fun getEnrolledCourses(userId: Long): List<CourseDetailResponse> {
+        // 1. 가장 최근 PracticeLog 조회
+        val practiceLog =
+            practiceLogRepository.findFirstByUserIdOrderByPracticeAtDesc(userId)
+                ?: throw ResourceNotFoundException("연습 기록이 없습니다")
+
+        val practiceLogId = practiceLog.id.ensureNotNull("연습 기록 ID가 없습니다")
+
+        // 2. 해당 세션의 성공한 시도들 조회
+        val successfulDetails =
+            practiceDetailRepository
+                .findByPracticeLogId(practiceLogId)
+                .filter { it.isSuccess && it.course != null }
+
+        // 3. Course -> CourseDetailResponse 변환
+        return successfulDetails
+            .mapNotNull { it.course }
+            .sortedWith(compareBy({ it.courseNumber }, { it.lectureNumber }))
+            .map { course ->
+                CourseDetailResponse(
+                    id = course.id.ensureNotNull("강의 ID가 없습니다"),
+                    year = course.year,
+                    semester = course.semester,
+                    classification = course.classification,
+                    college = course.college,
+                    department = course.department,
+                    academicCourse = course.academicCourse,
+                    academicYear = course.academicYear,
+                    courseNumber = course.courseNumber,
+                    lectureNumber = course.lectureNumber,
+                    courseTitle = course.courseTitle,
+                    credit = course.credit,
+                    instructor = course.instructor,
+                    placeAndTime = course.placeAndTime,
+                    quota = course.quota,
+                    freshmanQuota = course.freshmanQuota,
+                )
+            }
     }
 }
