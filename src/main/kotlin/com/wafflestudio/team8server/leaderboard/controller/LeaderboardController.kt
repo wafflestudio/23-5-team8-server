@@ -152,8 +152,11 @@ class LeaderboardController(
                                 value = """
                                 {
                                   "bestFirstReactionTime": 240,
+                                  "bestFirstReactionTimeRank": 85
                                   "bestSecondReactionTime": 550,
+                                  "bestSecondReactionTimeRank": 42
                                   "bestCompetitionRate": 3.2
+                                  "bestCompetitionRateRank": 14
                                 }
                                 """,
                             ),
