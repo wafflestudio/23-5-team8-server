@@ -3,7 +3,9 @@ package com.wafflestudio.team8server.leaderboard.service
 import com.wafflestudio.team8server.common.exception.ResourceForbiddenException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.leaderboard.model.LeaderboardRecord
+import com.wafflestudio.team8server.leaderboard.model.WeeklyLeaderboardRecord
 import com.wafflestudio.team8server.leaderboard.repository.LeaderboardRecordRepository
+import com.wafflestudio.team8server.leaderboard.repository.WeeklyLeaderboardRecordRepository
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
 import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
 import org.springframework.data.domain.PageRequest
@@ -13,8 +15,10 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class LeaderboardService(
     private val leaderboardRecordRepository: LeaderboardRecordRepository,
+    private val weelyLeaderboardRecordRepository: LeaderboardRecordRepository,
     private val practiceLogRepository: PracticeLogRepository,
     private val practiceDetailRepository: PracticeDetailRepository,
+    private val weeklyLeaderboardRecordRepository: WeeklyLeaderboardRecordRepository,
 ) {
     data class LeaderboardTopResult(
         val topFirstReactionTime: List<LeaderboardRecord>,
@@ -137,6 +141,76 @@ class LeaderboardService(
 
         if (changed) {
             leaderboardRecordRepository.save(record)
+        }
+    }
+
+    @Transactional
+    fun updateWeeklyByPracticeEnd(
+        userId: Long,
+        practiceLogId: Long,
+    ) {
+        val practiceLog =
+            practiceLogRepository.findById(practiceLogId).orElseThrow {
+                ResourceNotFoundException("연습 기록을 찾을 수 없습니다.")
+            }
+
+        val ownerId =
+            practiceLog.user.id
+                ?: throw ResourceNotFoundException("연습 기록을 찾을 수 없습니다.")
+        if (ownerId != userId) {
+            throw ResourceForbiddenException("본인의 연습 기록이 아닙니다.")
+        }
+
+        val details = practiceDetailRepository.findByPracticeLogIdOrderByIdAsc(practiceLogId)
+
+        val firstReactionCandidate = details.getOrNull(0)?.reactionTime
+        val secondReactionCandidate = details.getOrNull(1)?.reactionTime
+
+        val bestCompetitionRateCandidate =
+            details
+                .asSequence()
+                .filter { it.isSuccess }
+                .filter { it.capacity > 0 }
+                .map { it.totalCompetitors.toDouble() / it.capacity.toDouble() }
+                .maxOrNull()
+
+        val weekly =
+            weeklyLeaderboardRecordRepository.findByUserId(userId)
+                ?: WeeklyLeaderboardRecord(
+                    userId = userId,
+                    bestFirstReactionTime = null,
+                    bestSecondReactionTime = null,
+                    bestCompetitionRate = null,
+                )
+
+        var changed = false
+
+        if (firstReactionCandidate != null) {
+            val prev = weekly.bestFirstReactionTime
+            if (prev == null || firstReactionCandidate < prev) {
+                weekly.bestFirstReactionTime = firstReactionCandidate
+                changed = true
+            }
+        }
+
+        if (secondReactionCandidate != null) {
+            val prev = weekly.bestSecondReactionTime
+            if (prev == null || secondReactionCandidate < prev) {
+                weekly.bestSecondReactionTime = secondReactionCandidate
+                changed = true
+            }
+        }
+
+        if (bestCompetitionRateCandidate != null) {
+            val prev = weekly.bestCompetitionRate
+            if (prev == null || bestCompetitionRateCandidate > prev) {
+                weekly.bestCompetitionRate = bestCompetitionRateCandidate
+                changed = true
+            }
+        }
+
+        if (changed) {
+            weeklyLeaderboardRecordRepository.save(weekly)
         }
     }
 }

@@ -114,6 +114,10 @@ class PracticeService(
             userId = userId,
             practiceLogId = practiceLogId,
         )
+        leaderboardService.updateWeeklyByPracticeEnd(
+            userId = userId,
+            practiceLogId = practiceLogId,
+        )
 
         // 3. Redis에서 세션 삭제
         practiceSessionService.endSession(userId)
