@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -287,4 +288,32 @@ class MyPageController(
         @Parameter(hidden = true) @LoggedInUserId userId: Long,
         @Parameter(description = "연습 세션 ID") @PathVariable practiceLogId: Long,
     ): PracticeResultResponse = myPageService.getPracticeSessionDetail(userId, practiceLogId)
+
+    @Operation(
+        summary = "회원 탈퇴",
+        description = "현재 로그인한 사용자의 계정과 관련된 모든 데이터를 삭제합니다.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "204",
+                description = "회원 탈퇴 성공",
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "인증 실패",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "사용자를 찾을 수 없음",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteAccount(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+    ) = myPageService.deleteAccount(userId)
 }

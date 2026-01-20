@@ -1,6 +1,7 @@
 package com.wafflestudio.team8server.user.service
 
 import com.wafflestudio.team8server.common.dto.PageInfo
+import com.wafflestudio.team8server.common.exception.BadRequestException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
 import com.wafflestudio.team8server.common.extension.ensureNotNull
@@ -44,7 +45,7 @@ class MyPageService(
         request: UpdateProfileRequest,
     ): MyPageResponse {
         if (request.nickname == null && request.profileImageUrl == null) {
-            throw ResourceNotFoundException("수정할 항목이 없습니다")
+            throw BadRequestException("수정할 항목이 없습니다")
         }
 
         val user =
@@ -109,6 +110,15 @@ class MyPageService(
                     hasNext = practiceLogs.hasNext(),
                 ),
         )
+    }
+
+    @Transactional
+    fun deleteAccount(userId: Long) {
+        val user =
+            userRepository
+                .findById(userId)
+                .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
+        userRepository.delete(user)
     }
 
     @Transactional(readOnly = true)

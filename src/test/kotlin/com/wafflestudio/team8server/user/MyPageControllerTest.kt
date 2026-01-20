@@ -29,6 +29,7 @@ import org.springframework.http.MediaType
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -555,6 +556,41 @@ class MyPageControllerTest
                 mockMvc
                     .perform(
                         get("/api/mypage/practice-sessions/1"),
+                    ).andExpect(status().isUnauthorized)
+            }
+        }
+
+        // ==================== 회원 탈퇴 테스트 ====================
+
+        @Nested
+        @DisplayName("회원 탈퇴")
+        inner class DeleteAccount {
+            @Test
+            @DisplayName("회원 탈퇴 성공")
+            fun `delete account successfully`() {
+                val token = signupAndGetToken()
+
+                // 회원 탈퇴
+                mockMvc
+                    .perform(
+                        delete("/api/mypage")
+                            .header("Authorization", "Bearer $token"),
+                    ).andExpect(status().isNoContent)
+
+                // 탈퇴 후 마이페이지 조회 시 404 반환 확인
+                mockMvc
+                    .perform(
+                        get("/api/mypage")
+                            .header("Authorization", "Bearer $token"),
+                    ).andExpect(status().isNotFound)
+            }
+
+            @Test
+            @DisplayName("인증 없이 회원 탈퇴 시 401 반환")
+            fun `delete account without auth returns 401`() {
+                mockMvc
+                    .perform(
+                        delete("/api/mypage"),
                     ).andExpect(status().isUnauthorized)
             }
         }

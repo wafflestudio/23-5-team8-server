@@ -6,12 +6,20 @@ sealed class BusinessException(
     val errorCode: String,
 ) : RuntimeException(message)
 
-// NOTNULL이어야 하는 곳에서 NULL이 감지되는 예외 or 리소스를 못 찾는 예외
+// NOTNULL이어야 하는 곳에서 NULL이 감지되는 예외
 class ResourceNotFoundException(
     message: String,
 ) : BusinessException(
         message = message,
         errorCode = "RESOURCE_NOT_FOUND",
+    )
+
+// 잘못된 요청이 들어오는 예외 (형식에 어긋남)
+class BadRequestException(
+    message: String,
+) : BusinessException(
+        message = message,
+        errorCode = "BAD_REQUEST",
     )
 
 // 리소스에 대한 접근이 금지된 경우의 예외
