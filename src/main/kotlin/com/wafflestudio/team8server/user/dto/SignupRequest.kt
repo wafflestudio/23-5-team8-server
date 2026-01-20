@@ -24,10 +24,9 @@ data class SignupRequest(
         required = true,
     )
     val password: String,
-    @field:NotBlank(message = "닉네임은 필수입니다")
     @field:Size(min = 2, max = 6, message = "닉네임은 2자 이상 6자 이하여야 합니다")
-    @Schema(description = "사용자 닉네임 (2-6자)", example = "홍길동", required = true)
-    val nickname: String,
+    @Schema(description = "사용자 닉네임 (2-6자, 미입력 시 랜덤 생성)", example = "홍길동", required = false)
+    val nickname: String? = null,
     @field:Size(max = 255, message = "프로필 이미지 URL은 255자 이하여야 합니다")
     @Schema(description = "프로필 이미지 URL (선택사항)", example = "https://example.com/profile.jpg", required = false)
     val profileImageUrl: String? = null,
