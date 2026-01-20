@@ -1,5 +1,6 @@
 package com.wafflestudio.team8server.leaderboard.service
 
+import com.wafflestudio.team8server.common.exception.ResourceForbiddenException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.leaderboard.model.LeaderboardRecord
 import com.wafflestudio.team8server.leaderboard.repository.LeaderboardRecordRepository
@@ -77,7 +78,7 @@ class LeaderboardService(
             practiceLog.user.id
                 ?: throw ResourceNotFoundException("연습 기록을 찾을 수 없습니다.")
         if (ownerId != userId) {
-            throw ResourceNotFoundException("연습 기록을 찾을 수 없습니다.")
+            throw ResourceForbiddenException("본인의 연습 기록이 아닙니다.")
         }
 
         val details = practiceDetailRepository.findByPracticeLogIdOrderByIdAsc(practiceLogId)
