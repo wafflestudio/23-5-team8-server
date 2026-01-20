@@ -6,7 +6,7 @@ sealed class BusinessException(
     val errorCode: String,
 ) : RuntimeException(message)
 
-// NOTNULL이어야 하는 곳에서 NULL이 감지되는 예외
+// NOTNULL이어야 하는 곳에서 NULL이 감지되는 예외 or 리소스를 못 찾는 예외
 class ResourceNotFoundException(
     message: String,
 ) : BusinessException(

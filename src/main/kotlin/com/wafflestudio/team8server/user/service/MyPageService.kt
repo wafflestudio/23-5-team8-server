@@ -43,6 +43,10 @@ class MyPageService(
         userId: Long,
         request: UpdateProfileRequest,
     ): MyPageResponse {
+        if (request.nickname == null && request.profileImageUrl == null) {
+            throw ResourceNotFoundException("수정할 항목이 없습니다")
+        }
+
         val user =
             userRepository
                 .findById(userId)
@@ -137,7 +141,7 @@ class MyPageService(
             }
 
         return PracticeResultResponse(
-            practiceLogId = practiceLog.id!!,
+            practiceLogId = practiceLog.id.ensureNotNull(),
             practiceAt = practiceLog.practiceAt.toString(),
             earlyClickDiff = practiceLog.earlyClickDiff,
             totalAttempts = details.size,
