@@ -68,6 +68,45 @@ class LeaderboardService(
         )
     }
 
+    data class WeeklyLeaderboardTopResult(
+        val topFirstReactionTime: List<WeeklyLeaderboardRecord>,
+        val topSecondReactionTime: List<WeeklyLeaderboardRecord>,
+        val topCompetitionRate: List<WeeklyLeaderboardRecord>,
+    )
+
+    @Transactional(readOnly = true)
+    fun getWeeklyTopResult(limit: Int): WeeklyLeaderboardTopResult {
+        val safeLimit = limit.coerceIn(1, 100)
+        val pageable = PageRequest.of(0, safeLimit)
+
+        return WeeklyLeaderboardTopResult(
+            topFirstReactionTime = weeklyLeaderboardRecordRepository.findTopByBestFirstReactionTime(pageable),
+            topSecondReactionTime = weeklyLeaderboardRecordRepository.findTopByBestSecondReactionTime(pageable),
+            topCompetitionRate = weeklyLeaderboardRecordRepository.findTopByBestCompetitionRate(pageable),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun getWeeklyMyResult(userId: Long): MyLeaderboardResult {
+        val record = weeklyLeaderboardRecordRepository.findByUserId(userId)
+
+        val first = record?.bestFirstReactionTime
+        val second = record?.bestSecondReactionTime
+        val rate = record?.bestCompetitionRate
+        val firstRank = first?.let { weeklyLeaderboardRecordRepository.countBetterFirstReactionTime(it) + 1 }
+        val secondRank = second?.let { weeklyLeaderboardRecordRepository.countBetterSecondReactionTime(it) + 1 }
+        val rateRank = rate?.let { weeklyLeaderboardRecordRepository.countBetterCompetitionRate(it) + 1 }
+
+        return MyLeaderboardResult(
+            bestFirstReactionTime = first,
+            bestFirstReactionTimeRank = firstRank,
+            bestSecondReactionTime = second,
+            bestSecondReactionTimeRank = secondRank,
+            bestCompetitionRate = rate,
+            bestCompetitionRateRank = rateRank,
+        )
+    }
+
     @Transactional
     fun updateByPracticeEnd(
         userId: Long,

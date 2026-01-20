@@ -204,4 +204,89 @@ class LeaderboardController(
             bestCompetitionRateRank = result.bestCompetitionRateRank,
         )
     }
+
+    @Operation(
+        summary = "주간 상위 n명 리더보드 조회",
+        description = """
+            주간 리더보드는 매주 월요일 00:00(Asia/Seoul)에 초기화됩니다.
+            이외 API 세부 사항은 전체 리더보드 조회와 동일합니다.
+        """,
+    )
+    @GetMapping("/weekly")
+    fun getWeeklyTop(
+        @RequestParam(required = false, defaultValue = "10")
+        limit: Int,
+    ): LeaderboardTopResponse {
+        val result = leaderboardService.getWeeklyTopResult(limit)
+
+        return LeaderboardTopResponse(
+            topFirstReactionTime =
+                result.topFirstReactionTime.mapNotNull { record ->
+                    val user =
+                        userRepository
+                            .findById(record.userId)
+                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
+                    val value = record.bestFirstReactionTime ?: return@mapNotNull null
+                    LeaderboardEntryResponse(
+                        userId = user.id ?: return@mapNotNull null,
+                        nickname = user.nickname,
+                        profileImageUrl = user.profileImageUrl,
+                        value = value.toDouble(),
+                    )
+                },
+            topSecondReactionTime =
+                result.topSecondReactionTime.mapNotNull { record ->
+                    val user =
+                        userRepository
+                            .findById(record.userId)
+                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
+                    val value = record.bestSecondReactionTime ?: return@mapNotNull null
+                    LeaderboardEntryResponse(
+                        userId = user.id ?: return@mapNotNull null,
+                        nickname = user.nickname,
+                        profileImageUrl = user.profileImageUrl,
+                        value = value.toDouble(),
+                    )
+                },
+            topCompetitionRate =
+                result.topCompetitionRate.mapNotNull { record ->
+                    val user =
+                        userRepository
+                            .findById(record.userId)
+                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
+                    val value = record.bestCompetitionRate ?: return@mapNotNull null
+                    LeaderboardEntryResponse(
+                        userId = user.id ?: return@mapNotNull null,
+                        nickname = user.nickname,
+                        profileImageUrl = user.profileImageUrl,
+                        value = value,
+                    )
+                },
+        )
+    }
+
+    @Operation(
+        summary = "로그인한 유저의 주간 리더보드 최고 기록 조회",
+        description = """
+            주간 리더보드는 매주 월요일 00:00(Asia/Seoul)에 초기화됩니다.
+            이외 API 세부 사항은 전체 리더보드 조회와 동일합니다.
+        """,
+        security = [SecurityRequirement(name = "Bearer Authentication")],
+    )
+    @GetMapping("/weekly/me")
+    fun getWeeklyMy(
+        @Parameter(hidden = true)
+        @LoggedInUserId userId: Long,
+    ): MyLeaderboardResponse {
+        val result = leaderboardService.getWeeklyMyResult(userId)
+
+        return MyLeaderboardResponse(
+            bestFirstReactionTime = result.bestFirstReactionTime,
+            bestFirstReactionTimeRank = result.bestFirstReactionTimeRank,
+            bestSecondReactionTime = result.bestSecondReactionTime,
+            bestSecondReactionTimeRank = result.bestSecondReactionTimeRank,
+            bestCompetitionRate = result.bestCompetitionRate,
+            bestCompetitionRateRank = result.bestCompetitionRateRank,
+        )
+    }
 }
