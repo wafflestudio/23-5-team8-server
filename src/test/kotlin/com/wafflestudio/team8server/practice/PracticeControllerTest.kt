@@ -29,7 +29,9 @@ import org.springframework.http.MediaType
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.ResultHandler
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
@@ -60,6 +62,36 @@ class PracticeControllerTest
         private lateinit var mockMvc: MockMvc
         private lateinit var savedCourse: Course
         private val objectMapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
+
+        /**
+         * stdout/stderr가 캡처되어도, 5xx면 반드시 테스트 실패 리포트에 원인이 남도록 강제합니다.
+         */
+        private fun failOn5xx(): ResultHandler =
+            ResultHandler { r ->
+                val statusCode = r.response.status
+                if (statusCode in 500..599) {
+                    val body = r.response.contentAsString
+                    val ex = r.resolvedException
+                    if (ex != null) {
+                        throw AssertionError(
+                            buildString {
+                                append("HTTP ")
+                                append(statusCode)
+                                append(" returned from request. ")
+                                append("ResolvedException=")
+                                append(ex.javaClass.name)
+                                append(": ")
+                                append(ex.message)
+                                append(". ")
+                                append("Body=")
+                                append(body)
+                            },
+                            ex,
+                        )
+                    }
+                    throw AssertionError("HTTP $statusCode returned from request. Body=$body")
+                }
+            }
 
         @BeforeEach
         fun setUp() {
@@ -112,7 +144,8 @@ class PracticeControllerTest
                         post("/api/auth/signup")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(signupRequest)),
-                    ).andReturn()
+                    ).andDo(failOn5xx())
+                    .andReturn()
 
             val responseBody = response.response.contentAsString
             return objectMapper.readTree(responseBody).get("accessToken").asText()
@@ -129,7 +162,8 @@ class PracticeControllerTest
                 .perform(
                     post("/api/practice/start")
                         .header("Authorization", "Bearer $token"),
-                ).andExpect(status().isCreated)
+                ).andDo(failOn5xx())
+                .andExpect(status().isCreated)
                 .andExpect(jsonPath("$.practiceLogId").isNumber)
                 .andExpect(jsonPath("$.virtualStartTime").value("08:29:30"))
                 .andExpect(jsonPath("$.targetTime").value("08:30:00"))
@@ -149,7 +183,8 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)),
-                ).andExpect(status().isCreated)
+                ).andDo(failOn5xx())
+                .andExpect(status().isCreated)
                 .andExpect(jsonPath("$.practiceLogId").isNumber)
                 .andExpect(jsonPath("$.virtualStartTime").value("08:29:00"))
                 .andExpect(jsonPath("$.targetTime").value("08:30:00"))
@@ -162,17 +197,19 @@ class PracticeControllerTest
             val token = signupAndGetToken()
 
             // 첫 번째 세션 시작
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
+            mockMvc
+                .perform(
+                    post("/api/practice/start")
+                        .header("Authorization", "Bearer $token"),
+                ).andDo(failOn5xx())
 
             // 두 번째 세션 시작 시도 (실패해야 함)
             mockMvc
                 .perform(
                     post("/api/practice/start")
                         .header("Authorization", "Bearer $token"),
-                ).andExpect(status().isConflict) // 409
+                ).andDo(failOn5xx())
+                .andExpect(status().isConflict) // 409
                 .andExpect(jsonPath("$.status").value(409))
                 .andExpect(jsonPath("$.errorCode").value("ACTIVE_SESSION_EXISTS"))
         }
@@ -183,7 +220,8 @@ class PracticeControllerTest
             mockMvc
                 .perform(
                     post("/api/practice/start"),
-                ).andExpect(status().isUnauthorized) // 401
+                ).andDo(failOn5xx())
+                .andExpect(status().isUnauthorized) // 401
         }
 
         // ==================== 세션 종료 테스트 ====================
@@ -194,17 +232,20 @@ class PracticeControllerTest
             val token = signupAndGetToken()
 
             // 세션 시작
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
+            mockMvc
+                .perform(
+                    post("/api/practice/start")
+                        .header("Authorization", "Bearer $token"),
+                ).andDo(failOn5xx())
 
             // 세션 종료
             mockMvc
                 .perform(
                     post("/api/practice/end")
                         .header("Authorization", "Bearer $token"),
-                ).andExpect(status().isOk) // 200
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.message").exists())
                 .andExpect(jsonPath("$.totalAttempts").isNumber)
         }
@@ -218,7 +259,9 @@ class PracticeControllerTest
                 .perform(
                     post("/api/practice/end")
                         .header("Authorization", "Bearer $token"),
-                ).andExpect(status().isBadRequest) // 400
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isBadRequest) // 400
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.errorCode").value("NO_ACTIVE_SESSION"))
         }
@@ -243,7 +286,9 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)),
-                ).andExpect(status().isBadRequest) // 400
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isBadRequest) // 400
                 .andExpect(jsonPath("$.errorCode").value("NO_ACTIVE_SESSION"))
         }
 
@@ -257,16 +302,17 @@ class PracticeControllerTest
          * 3. 테스트 실행하면 7초 대기 후 세션이 만료되어 400 에러 발생하는지 확인
          */
         @Test
-        @Disabled("Redis TTL은 시스템 시간 기반이므로 MockTimeProvider로 테스트 불가. 수동 테스트 필요.")
+        @Disabled("Redis TTL은 시스템 시간 기반이므로 MockTimeProvider로 테스트할 수 없습니다. 수동 테스트 필요.")
         @DisplayName("연습 시간 초과 시 400 반환 (Redis TTL 만료로 세션 없음) - 수동 테스트")
         fun `attempt practice after time limit returns 400`() {
             val token = signupAndGetToken()
 
             // 세션 시작
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
+            mockMvc
+                .perform(
+                    post("/api/practice/start")
+                        .header("Authorization", "Bearer $token"),
+                ).andDo(failOn5xx())
 
             // 7초 대기 (TTL 6초 설정 시 만료 확인)
             Thread.sleep(7000)
@@ -284,7 +330,9 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)),
-                ).andExpect(status().isBadRequest) // 400
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isBadRequest) // 400
                 .andExpect(jsonPath("$.errorCode").value("NO_ACTIVE_SESSION"))
         }
 
@@ -294,14 +342,13 @@ class PracticeControllerTest
             val token = signupAndGetToken()
 
             // 세션 시작 (시작 시간: 1000000000ms, 기본 offset: 30000ms)
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
+            mockMvc
+                .perform(
+                    post("/api/practice/start")
+                        .header("Authorization", "Bearer $token"),
+                ).andDo(failOn5xx())
 
             // 시간 조작: userLatencyMs = -500ms가 되도록 설정
-            // 현재 시간 = 세션 시작 시간 + startToTargetOffsetMs + userLatencyMs
-            // 현재 시간 = 1000000000 + 30000 + (-500) = 1000029500ms
             mockTimeProvider.setTime(1000029500L)
 
             val request =
@@ -317,7 +364,9 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)),
-                ).andExpect(status().isOk) // 200
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.message").value("수강신청 기간이 아닙니다"))
         }
@@ -327,14 +376,13 @@ class PracticeControllerTest
         fun `attempt practice with early click outside threshold does not record to DB`() {
             val token = signupAndGetToken()
 
-            // 세션 시작 (시작 시간: 1000000000ms, 기본 offset: 30000ms)
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
+            // 세션 시작
+            mockMvc
+                .perform(
+                    post("/api/practice/start")
+                        .header("Authorization", "Bearer $token"),
+                ).andDo(failOn5xx())
 
-            // 시간 조작: userLatencyMs = -2000ms가 되도록 설정
-            // 현재 시간 = 1000000000 + 30000 + (-2000) = 1000028000ms
             mockTimeProvider.setTime(1000028000L)
 
             val request =
@@ -350,7 +398,9 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)),
-                ).andExpect(status().isOk) // 200
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.message").value("수강신청 기간이 아닙니다"))
         }
@@ -360,21 +410,19 @@ class PracticeControllerTest
         fun `attempt practice successfully within capacity`() {
             val token = signupAndGetToken()
 
-            // 세션 시작 (시작 시간: 1000000000ms, 기본 offset: 30000ms)
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
+            mockMvc
+                .perform(
+                    post("/api/practice/start")
+                        .header("Authorization", "Bearer $token"),
+                ).andDo(failOn5xx())
 
-            // 시간 조작: userLatencyMs = 50ms가 되도록 설정 (매우 빠른 반응)
-            // 현재 시간 = 1000000000 + 30000 + 50 = 1000030050ms
             mockTimeProvider.setTime(1000030050L)
 
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
                     totalCompetitors = 100,
-                    capacity = 80, // 높은 정원
+                    capacity = 80,
                 )
 
             mockMvc
@@ -383,7 +431,9 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)),
-                ).andExpect(status().isOk) // 200
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.message").value("수강신청에 성공했습니다"))
         }
@@ -393,21 +443,19 @@ class PracticeControllerTest
         fun `attempt practice fails when exceeds capacity`() {
             val token = signupAndGetToken()
 
-            // 세션 시작 (시작 시간: 1000000000ms, 기본 offset: 30000ms)
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
+            mockMvc
+                .perform(
+                    post("/api/practice/start")
+                        .header("Authorization", "Bearer $token"),
+                ).andDo(failOn5xx())
 
-            // 시간 조작: userLatencyMs = 5000ms가 되도록 설정 (느린 반응)
-            // 현재 시간 = 1000000000 + 30000 + 5000 = 1000035000ms
             mockTimeProvider.setTime(1000035000L)
 
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
                     totalCompetitors = 100,
-                    capacity = 10, // 낮은 정원
+                    capacity = 10,
                 )
 
             mockMvc
@@ -416,7 +464,9 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)),
-                ).andExpect(status().isOk) // 200
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk) // 200
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.message").value("정원이 초과되었습니다"))
         }
@@ -440,14 +490,14 @@ class PracticeControllerTest
                     ),
                 )
 
-            // 세션 시작 (시작 시간: 1000000000ms, 기본 offset: 30000ms)
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
+            // 세션 시작
+            mockMvc
+                .perform(
+                    post("/api/practice/start")
+                        .header("Authorization", "Bearer $token"),
+                ).andDo(failOn5xx())
 
-            // 첫 번째 강의 시도 (userLatencyMs = 100ms)
-            // 현재 시간 = 1000000000 + 30000 + 100 = 1000030100ms
+            // 첫 번째 강의 시도
             mockTimeProvider.setTime(1000030100L)
             val request1 =
                 PracticeAttemptRequest(
@@ -456,15 +506,15 @@ class PracticeControllerTest
                     capacity = 40,
                 )
 
-            mockMvc.perform(
-                post("/api/practice/attempt")
-                    .header("Authorization", "Bearer $token")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request1)),
-            )
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request1)),
+                ).andDo(failOn5xx())
 
-            // 두 번째 강의 시도 (userLatencyMs = 200ms)
-            // 현재 시간 = 1000000000 + 30000 + 200 = 1000030200ms
+            // 두 번째 강의 시도
             mockTimeProvider.setTime(1000030200L)
             val request2 =
                 PracticeAttemptRequest(
@@ -479,14 +529,18 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request2)),
-                ).andExpect(status().isOk) // 200
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk) // 200
 
             // 세션 종료 후 totalAttempts 확인
             mockMvc
                 .perform(
                     post("/api/practice/end")
                         .header("Authorization", "Bearer $token"),
-                ).andExpect(status().isOk)
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk)
                 .andExpect(jsonPath("$.totalAttempts").value(2))
         }
 
@@ -495,14 +549,14 @@ class PracticeControllerTest
         fun `duplicate attempt returns already enrolled message when first attempt succeeded`() {
             val token = signupAndGetToken()
 
-            // 세션 시작 (시작 시간: 1000000000ms, 기본 offset: 30000ms)
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
+            // 세션 시작
+            mockMvc
+                .perform(
+                    post("/api/practice/start")
+                        .header("Authorization", "Bearer $token"),
+                ).andDo(failOn5xx())
 
-            // 첫 번째 시도 (성공하도록 빠른 반응 시간, userLatencyMs = 50ms)
-            // 현재 시간 = 1000000000 + 30000 + 50 = 1000030050ms
+            // 첫 번째 시도
             mockTimeProvider.setTime(1000030050L)
             val request1 =
                 PracticeAttemptRequest(
@@ -517,12 +571,13 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request1)),
-                ).andExpect(status().isOk)
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk)
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.message").value("수강신청에 성공했습니다"))
 
-            // 같은 강의 두 번째 시도 (중복, userLatencyMs = 200ms)
-            // 현재 시간 = 1000000000 + 30000 + 200 = 1000030200ms
+            // 같은 강의 두 번째 시도
             mockTimeProvider.setTime(1000030200L)
             val request2 =
                 PracticeAttemptRequest(
@@ -537,16 +592,20 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request2)),
-                ).andExpect(status().isOk)
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk)
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.message").value("이미 수강신청된 강의입니다"))
 
-            // 세션 종료 후 totalAttempts가 1인지 확인 (중복 시도는 DB에 저장 안 됨)
+            // 세션 종료 후 totalAttempts가 1인지 확인
             mockMvc
                 .perform(
                     post("/api/practice/end")
                         .header("Authorization", "Bearer $token"),
-                ).andExpect(status().isOk)
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk)
                 .andExpect(jsonPath("$.totalAttempts").value(1))
         }
 
@@ -555,14 +614,14 @@ class PracticeControllerTest
         fun `duplicate attempt returns capacity exceeded message when first attempt failed`() {
             val token = signupAndGetToken()
 
-            // 세션 시작 (시작 시간: 1000000000ms, 기본 offset: 30000ms)
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
+            // 세션 시작
+            mockMvc
+                .perform(
+                    post("/api/practice/start")
+                        .header("Authorization", "Bearer $token"),
+                ).andDo(failOn5xx())
 
-            // 첫 번째 시도 (실패하도록 느린 반응 시간, userLatencyMs = 5000ms)
-            // 현재 시간 = 1000000000 + 30000 + 5000 = 1000035000ms
+            // 첫 번째 시도
             mockTimeProvider.setTime(1000035000L)
             val request1 =
                 PracticeAttemptRequest(
@@ -577,12 +636,13 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request1)),
-                ).andExpect(status().isOk)
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk)
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.message").value("정원이 초과되었습니다"))
 
-            // 같은 강의 두 번째 시도 (중복, userLatencyMs = 5050ms)
-            // 현재 시간 = 1000000000 + 30000 + 5050 = 1000035050ms
+            // 같은 강의 두 번째 시도
             mockTimeProvider.setTime(1000035050L)
             val request2 =
                 PracticeAttemptRequest(
@@ -597,7 +657,9 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request2)),
-                ).andExpect(status().isOk)
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk)
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.message").value("정원이 초과되었습니다(이미 시도한 강의입니다)"))
 
@@ -606,7 +668,9 @@ class PracticeControllerTest
                 .perform(
                     post("/api/practice/end")
                         .header("Authorization", "Bearer $token"),
-                ).andExpect(status().isOk)
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isOk)
                 .andExpect(jsonPath("$.totalAttempts").value(1))
         }
 
@@ -616,10 +680,11 @@ class PracticeControllerTest
             val token = signupAndGetToken()
 
             // 세션 시작
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
+            mockMvc
+                .perform(
+                    post("/api/practice/start")
+                        .header("Authorization", "Bearer $token"),
+                ).andDo(failOn5xx())
 
             val request =
                 PracticeAttemptRequest(
@@ -634,7 +699,9 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)),
-                ).andExpect(status().isBadRequest) // 400
+                ).andDo(print())
+                .andDo(failOn5xx())
+                .andExpect(status().isBadRequest) // 400
                 .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.validationErrors.totalCompetitors").exists())
         }

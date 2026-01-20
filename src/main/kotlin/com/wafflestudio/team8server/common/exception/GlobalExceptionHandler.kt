@@ -43,6 +43,18 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response)
     }
 
+    @ExceptionHandler(ResourceForbiddenException::class)
+    fun handleResourceForbiddenException(e: ResourceForbiddenException): ResponseEntity<ErrorResponse> {
+        val response =
+            ErrorResponse(
+                status = HttpStatus.FORBIDDEN.value(), // 403
+                error = "Forbidden",
+                message = e.message,
+                errorCode = e.errorCode,
+            )
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response)
+    }
+
     // 이메일 중복 예외 처리 → 409 CONFLICT
     @ExceptionHandler(DuplicateEmailException::class)
     fun handleDuplicateEmailException(e: DuplicateEmailException): ResponseEntity<ErrorResponse> {
