@@ -5,8 +5,10 @@ spring:
   # mysql, reddis 관련 설정은 testcontainer 라이브러리로 자동화
   jpa:
     hibernate:
-      ddl-auto: create-drop # 테스트 후 초기화 (어차피 container 내려가면서 초기화지만 안정성 확보)
+      ddl-auto: validate # Flyway로 스키마 생성 후 검증만 수행
     show-sql: true
+  flyway:
+    enabled: true # Flyway 마이그레이션 사용 (ON DELETE CASCADE 등 제약조건 적용)
 
 jwt:
   secret: test-secret-key-for-testing-at-least-256-bits-long-hs256-algorithm

@@ -11,4 +11,7 @@ interface LocalCredentialRepository : JpaRepository<LocalCredential, Long> {
 
     // 이메일로 인증 정보 조회 (없으면 null 반환)
     fun findByEmail(email: String): LocalCredential?
+
+    // 사용자 ID로 인증 정보 조회 (비밀번호 변경 시 사용)
+    fun findByUserId(userId: Long): LocalCredential?
 }

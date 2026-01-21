@@ -14,6 +14,14 @@ class ResourceNotFoundException(
         errorCode = "RESOURCE_NOT_FOUND",
     )
 
+// 잘못된 요청이 들어오는 예외 (형식에 어긋남)
+class BadRequestException(
+    message: String,
+) : BusinessException(
+        message = message,
+        errorCode = "BAD_REQUEST",
+    )
+
 // 리소스에 대한 접근이 금지된 경우의 예외
 class ResourceForbiddenException(
     message: String,
