@@ -15,6 +15,7 @@ import com.wafflestudio.team8server.practice.service.PracticeSessionService
 import com.wafflestudio.team8server.user.dto.SignupRequest
 import com.wafflestudio.team8server.user.repository.LocalCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
@@ -193,26 +194,44 @@ class PracticeControllerTest
         }
 
         @Test
-        @DisplayName("이미 진행 중인 세션이 있을 때 세션 시작 실패")
-        fun `start practice session fails when active session exists`() {
+        @DisplayName("이미 진행 중인 세션이 있을 때 기존 세션 종료 후 새 세션 시작")
+        fun `start practice session ends existing session and starts new one`() {
             val token = signupAndGetToken()
 
             // 첫 번째 세션 시작
-            mockMvc
-                .perform(
-                    post("/api/practice/start")
-                        .header("Authorization", "Bearer $token"),
-                ).andDo(failOn5xx())
+            val firstResult =
+                mockMvc
+                    .perform(
+                        post("/api/practice/start")
+                            .header("Authorization", "Bearer $token"),
+                    ).andDo(failOn5xx())
+                    .andExpect(status().isCreated)
+                    .andReturn()
 
-            // 두 번째 세션 시작 시도 (실패해야 함)
-            mockMvc
-                .perform(
-                    post("/api/practice/start")
-                        .header("Authorization", "Bearer $token"),
-                ).andDo(failOn5xx())
-                .andExpect(status().isConflict) // 409
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.errorCode").value("ACTIVE_SESSION_EXISTS"))
+            val firstPracticeLogId =
+                objectMapper
+                    .readTree(firstResult.response.contentAsString)
+                    .get("practiceLogId")
+                    .asLong()
+
+            // 두 번째 세션 시작 (기존 세션 종료 후 새 세션 시작)
+            val secondResult =
+                mockMvc
+                    .perform(
+                        post("/api/practice/start")
+                            .header("Authorization", "Bearer $token"),
+                    ).andDo(failOn5xx())
+                    .andExpect(status().isCreated)
+                    .andReturn()
+
+            val secondPracticeLogId =
+                objectMapper
+                    .readTree(secondResult.response.contentAsString)
+                    .get("practiceLogId")
+                    .asLong()
+
+            // 새로운 세션이 생성되었는지 확인
+            assertNotEquals(firstPracticeLogId, secondPracticeLogId)
         }
 
         @Test

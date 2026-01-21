@@ -9,8 +9,9 @@ import java.util.concurrent.TimeUnit
  * Redis를 사용한 수강신청 연습 세션 관리 서비스
  *
  * 세션 정보:
- * - Key: "practice:session:{userId}" → practiceLogId (연습 세션 ID)
+ * - Key: "practice:session:{userId}:{practiceLogId}" → "active"
  * - TTL: config에서 설정된 세션 유지 시간
+ * - 키 만료 시 Keyspace Notification을 통해 리더보드 갱신 트리거
  */
 @Service
 class PracticeSessionService(
@@ -25,7 +26,29 @@ class PracticeSessionService(
     }
 
     /**
+     * 세션 키에서 userId와 practiceLogId를 추출합니다.
+     * 키 형식: "practice:session:{userId}:{practiceLogId}"
+     *
+     * @param key Redis 키
+     * @return Pair(userId, practiceLogId), 파싱 실패 시 null
+     */
+    fun parseSessionKey(key: String): Pair<Long, Long>? {
+        if (!key.startsWith(SESSION_KEY_PREFIX)) return null
+        // lock, startTime, offset 키는 제외
+        if (key.contains(":lock") || key.contains(":startTime") || key.contains(":offset")) {
+            return null
+        }
+        val suffix = key.removePrefix(SESSION_KEY_PREFIX)
+        val parts = suffix.split(":")
+        if (parts.size != 2) return null
+        val userId = parts[0].toLongOrNull() ?: return null
+        val practiceLogId = parts[1].toLongOrNull() ?: return null
+        return Pair(userId, practiceLogId)
+    }
+
+    /**
      * 사용자의 활성 세션을 생성합니다.
+     * 키 형식: "practice:session:{userId}:{practiceLogId}"
      *
      * @param userId 사용자 ID
      * @param practiceLogId 연습 세션 ID
@@ -34,12 +57,12 @@ class PracticeSessionService(
         userId: Long,
         practiceLogId: Long,
     ) {
-        val sessionKey = SESSION_KEY_PREFIX + userId
+        val sessionKey = "$SESSION_KEY_PREFIX$userId:$practiceLogId"
 
-        // practiceLogId 저장 (TTL 자동 설정)
+        // "active" 값으로 저장 (TTL 자동 설정)
         redisTemplate.opsForValue().set(
             sessionKey,
-            practiceLogId.toString(),
+            "active",
             config.timeLimitSeconds,
             TimeUnit.SECONDS,
         )
@@ -47,14 +70,22 @@ class PracticeSessionService(
 
     /**
      * 사용자의 활성 세션 ID를 조회합니다.
+     * 패턴 검색으로 "practice:session:{userId}:{practiceLogId}" 형식의 키를 찾습니다.
      *
      * @param userId 사용자 ID
      * @return 활성 세션 ID (없으면 null)
      */
     fun getActiveSession(userId: Long): Long? {
-        val key = SESSION_KEY_PREFIX + userId
-        val value = redisTemplate.opsForValue().get(key)
-        return value?.toLongOrNull()
+        val pattern = "$SESSION_KEY_PREFIX$userId:*"
+        val keys = redisTemplate.keys(pattern) ?: return null
+
+        for (key in keys) {
+            val parsed = parseSessionKey(key)
+            if (parsed != null && parsed.first == userId) {
+                return parsed.second
+            }
+        }
+        return null
     }
 
     /**
@@ -63,10 +94,7 @@ class PracticeSessionService(
      * @param userId 사용자 ID
      * @return 활성 세션 존재 여부
      */
-    fun hasActiveSession(userId: Long): Boolean {
-        val key = SESSION_KEY_PREFIX + userId
-        return redisTemplate.hasKey(key) ?: false
-    }
+    fun hasActiveSession(userId: Long): Boolean = getActiveSession(userId) != null
 
     /**
      * 사용자의 활성 세션을 종료합니다.
@@ -74,7 +102,8 @@ class PracticeSessionService(
      * @param userId 사용자 ID
      */
     fun endSession(userId: Long) {
-        val sessionKey = SESSION_KEY_PREFIX + userId
+        val practiceLogId = getActiveSession(userId) ?: return
+        val sessionKey = "$SESSION_KEY_PREFIX$userId:$practiceLogId"
         redisTemplate.delete(sessionKey)
     }
 
@@ -85,7 +114,8 @@ class PracticeSessionService(
      * @return 남은 TTL (초), 세션이 없으면 null
      */
     fun getSessionTTL(userId: Long): Long? {
-        val key = SESSION_KEY_PREFIX + userId
+        val practiceLogId = getActiveSession(userId) ?: return null
+        val key = "$SESSION_KEY_PREFIX$userId:$practiceLogId"
         val ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS)
         return if (ttl > 0) ttl else null
     }
