@@ -7,7 +7,6 @@ import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
 import com.wafflestudio.team8server.practice.dto.PracticeEndResponse
-import com.wafflestudio.team8server.practice.dto.PracticeResultResponse
 import com.wafflestudio.team8server.practice.dto.PracticeStartRequest
 import com.wafflestudio.team8server.practice.dto.PracticeStartResponse
 import com.wafflestudio.team8server.practice.service.PracticeService
@@ -22,8 +21,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -486,152 +483,6 @@ class PracticeController(
         @LoggedInUserId userId: Long,
         @Valid @RequestBody request: PracticeAttemptRequest,
     ): PracticeAttemptResponse = practiceService.attemptPractice(userId, request)
-
-    @Operation(
-        summary = "연습 세션 결과 조회",
-        description =
-            """
-            특정 연습 세션의 결과를 조회합니다.
-
-            **주요 기능:**
-            - 본인의 연습 기록만 조회할 수 있습니다.
-            - 모든 시도 내역과 통계 정보를 반환합니다.
-            - 세션 종료 후 결과 확인 또는 연습 기록 조회에 사용됩니다.
-
-            **Response 구성:**
-            - practiceLogId: 연습 세션 ID
-            - practiceAt: 연습 시작 시간
-            - earlyClickDiff: Early Click 기록 (음수, 1초 이내만 기록)
-            - totalAttempts: 총 시도 횟수
-            - successCount: 성공 횟수
-            - attempts: 각 시도의 상세 정보 리스트
-              - courseId: 강의 ID
-              - courseTitle: 강의명
-              - lectureNumber: 분반 번호
-              - isSuccess: 성공 여부
-              - rank: 등수
-              - percentile: 백분위
-              - reactionTime: 반응 속도 (ms)
-            """,
-        security = [SecurityRequirement(name = "Bearer Authentication")],
-    )
-    @ApiResponses(
-        value = [
-            ApiResponse(
-                responseCode = "200",
-                description = "결과 조회 성공",
-                content = [
-                    Content(
-                        schema = Schema(implementation = PracticeResultResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "results-success",
-                                summary = "연습 결과 조회 성공",
-                                value =
-                                    """
-                                    {
-                                      "practiceLogId": 42,
-                                      "practiceAt": "2026-01-15T14:30:00",
-                                      "earlyClickDiff": -500,
-                                      "totalAttempts": 3,
-                                      "successCount": 2,
-                                      "attempts": [
-                                        {
-                                          "courseId": 123,
-                                          "courseTitle": "운영체제",
-                                          "lectureNumber": "001",
-                                          "isSuccess": true,
-                                          "rank": 15,
-                                          "percentile": 0.45,
-                                          "reactionTime": 120
-                                        },
-                                        {
-                                          "courseId": 456,
-                                          "courseTitle": "자료구조",
-                                          "lectureNumber": "002",
-                                          "isSuccess": false,
-                                          "rank": 35,
-                                          "percentile": 0.87,
-                                          "reactionTime": 350
-                                        },
-                                        {
-                                          "courseId": 789,
-                                          "courseTitle": "알고리즘",
-                                          "lectureNumber": "001",
-                                          "isSuccess": true,
-                                          "rank": 8,
-                                          "percentile": 0.26,
-                                          "reactionTime": 80
-                                        }
-                                      ]
-                                    }
-                                    """,
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-            ApiResponse(
-                responseCode = "401",
-                description = "다른 사용자의 기록 접근 시도",
-                content = [
-                    Content(
-                        schema = Schema(implementation = ErrorResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "unauthorized-access",
-                                summary = "권한 없음",
-                                value =
-                                    """
-                                    {
-                                      "timestamp": "2026-01-15T12:00:00",
-                                      "status": 401,
-                                      "error": "Unauthorized",
-                                      "message": "다른 사용자의 연습 기록에 접근할 수 없습니다",
-                                      "errorCode": "UNAUTHORIZED",
-                                      "validationErrors": null
-                                    }
-                                    """,
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-            ApiResponse(
-                responseCode = "404",
-                description = "연습 기록을 찾을 수 없음",
-                content = [
-                    Content(
-                        schema = Schema(implementation = ErrorResponse::class),
-                        examples = [
-                            ExampleObject(
-                                name = "practice-log-not-found",
-                                summary = "연습 기록 없음",
-                                value =
-                                    """
-                                    {
-                                      "timestamp": "2026-01-15T12:00:00",
-                                      "status": 404,
-                                      "error": "Not Found",
-                                      "message": "연습 기록을 찾을 수 없습니다",
-                                      "errorCode": "RESOURCE_NOT_FOUND",
-                                      "validationErrors": null
-                                    }
-                                    """,
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    )
-    @GetMapping("/results/{practiceLogId}")
-    @ResponseStatus(HttpStatus.OK)
-    fun getPracticeResults(
-        @Parameter(hidden = true)
-        @LoggedInUserId userId: Long,
-        @PathVariable practiceLogId: Long,
-    ): PracticeResultResponse = practiceService.getPracticeResults(userId, practiceLogId)
 
     @Operation(
         summary = "성공한 강의 목록 조회",
