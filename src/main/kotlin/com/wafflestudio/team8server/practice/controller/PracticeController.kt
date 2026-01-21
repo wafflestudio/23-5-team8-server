@@ -2,6 +2,7 @@ package com.wafflestudio.team8server.practice.controller
 
 import com.wafflestudio.team8server.common.auth.LoggedInUserId
 import com.wafflestudio.team8server.common.exception.ErrorResponse
+import com.wafflestudio.team8server.course.dto.CourseDetailResponse
 import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
@@ -20,6 +21,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -482,4 +484,122 @@ class PracticeController(
         @LoggedInUserId userId: Long,
         @Valid @RequestBody request: PracticeAttemptRequest,
     ): PracticeAttemptResponse = practiceService.attemptPractice(userId, request)
+
+    @Operation(
+        summary = "성공한 강의 목록 조회",
+        description =
+            """
+            가장 최근 연습 세션에서 수강신청에 성공한 강의 목록을 조회합니다.
+
+            **주요 기능:**
+            - 로그인한 사용자의 가장 최근 연습 세션을 자동으로 조회합니다.
+            - 해당 세션에서 isSuccess=true인 강의들만 반환합니다.
+            - 강의 정보는 CourseDetailResponse 형식으로 반환됩니다.
+
+            **Response:**
+            - 성공한 강의들의 상세 정보 리스트
+            - 교과목번호, 강좌번호 순으로 정렬
+            """,
+        security = [SecurityRequirement(name = "Bearer Authentication")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "성공한 강의 목록 조회 성공",
+                content = [
+                    Content(
+                        schema = Schema(implementation = CourseDetailResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "enrolled-courses-success",
+                                summary = "성공한 강의 목록",
+                                value =
+                                    """
+                                    [
+                                      {
+                                        "id": 123,
+                                        "year": 2026,
+                                        "semester": "SPRING",
+                                        "classification": "전공선택",
+                                        "college": "공과대학",
+                                        "department": "컴퓨터공학부",
+                                        "academicCourse": "학부",
+                                        "academicYear": "3",
+                                        "courseNumber": "4190.310",
+                                        "lectureNumber": "001",
+                                        "courseTitle": "운영체제",
+                                        "credit": 3,
+                                        "instructor": "홍길동",
+                                        "placeAndTime": "{\"place\":\"301호\",\"time\":\"화(10:00~11:50)\"}",
+                                        "quota": 80,
+                                        "freshmanQuota": null
+                                      }
+                                    ]
+                                    """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "인증 실패",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "unauthorized",
+                                summary = "인증 실패",
+                                value =
+                                    """
+                                    {
+                                      "timestamp": "2026-01-20T12:00:00",
+                                      "status": 401,
+                                      "error": "Unauthorized",
+                                      "message": "인증에 실패했습니다",
+                                      "errorCode": "UNAUTHORIZED",
+                                      "validationErrors": null
+                                    }
+                                    """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "연습 기록 없음",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "no-practice-log",
+                                summary = "연습 기록 없음",
+                                value =
+                                    """
+                                    {
+                                      "timestamp": "2026-01-20T12:00:00",
+                                      "status": 404,
+                                      "error": "Not Found",
+                                      "message": "연습 기록이 없습니다",
+                                      "errorCode": "RESOURCE_NOT_FOUND",
+                                      "validationErrors": null
+                                    }
+                                    """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    @GetMapping("/enrolled-courses")
+    @ResponseStatus(HttpStatus.OK)
+    fun getEnrolledCourses(
+        @Parameter(hidden = true)
+        @LoggedInUserId userId: Long,
+    ): List<CourseDetailResponse> = practiceService.getEnrolledCourses(userId)
 }

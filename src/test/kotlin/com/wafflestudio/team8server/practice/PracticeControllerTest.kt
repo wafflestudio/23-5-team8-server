@@ -30,6 +30,7 @@ import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfig
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultHandler
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -704,5 +705,379 @@ class PracticeControllerTest
                 .andExpect(status().isBadRequest) // 400
                 .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.validationErrors.totalCompetitors").exists())
+        }
+
+        // ==================== 성공한 강의 목록 조회 테스트 ====================
+
+        @Test
+        @DisplayName("성공한 강의 목록 조회 성공")
+        fun `get enrolled courses returns successful courses`() {
+            val token = signupAndGetToken()
+
+            // 두 번째 강의 생성
+            val course2 =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "CS200",
+                        lectureNumber = "001",
+                        courseTitle = "알고리즘",
+                        quota = 50,
+                        instructor = "김교수",
+                        placeAndTime = """{"time": "화(14:00~15:50)"}""",
+                    ),
+                )
+
+            // 세션 시작
+            mockMvc.perform(
+                post("/api/practice/start")
+                    .header("Authorization", "Bearer $token"),
+            )
+
+            // 첫 번째 강의 시도 - 성공 (빠른 반응)
+            mockTimeProvider.setTime(1000030050L)
+            val request1 =
+                PracticeAttemptRequest(
+                    courseId = savedCourse.id!!,
+                    totalCompetitors = 100,
+                    capacity = 80,
+                )
+            mockMvc.perform(
+                post("/api/practice/attempt")
+                    .header("Authorization", "Bearer $token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request1)),
+            )
+
+            // 두 번째 강의 시도 - 성공 (빠른 반응)
+            mockTimeProvider.setTime(1000030100L)
+            val request2 =
+                PracticeAttemptRequest(
+                    courseId = course2.id!!,
+                    totalCompetitors = 100,
+                    capacity = 80,
+                )
+            mockMvc.perform(
+                post("/api/practice/attempt")
+                    .header("Authorization", "Bearer $token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request2)),
+            )
+
+            // 세션 종료
+            mockMvc.perform(
+                post("/api/practice/end")
+                    .header("Authorization", "Bearer $token"),
+            )
+
+            // 성공한 강의 목록 조회
+            mockMvc
+                .perform(
+                    get("/api/practice/enrolled-courses")
+                        .header("Authorization", "Bearer $token"),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].courseNumber").value("CS200")) // 정렬 확인 (CS200 < TEST001)
+                .andExpect(jsonPath("$[1].courseNumber").value("TEST001"))
+        }
+
+        @Test
+        @DisplayName("연습 기록이 없을 때 404 반환")
+        fun `get enrolled courses without practice log returns 404`() {
+            val token = signupAndGetToken()
+
+            // 연습 없이 바로 조회
+            mockMvc
+                .perform(
+                    get("/api/practice/enrolled-courses")
+                        .header("Authorization", "Bearer $token"),
+                ).andExpect(status().isNotFound)
+                .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("연습 기록이 없습니다"))
+        }
+
+        @Test
+        @DisplayName("성공한 강의가 없을 때 빈 리스트 반환")
+        fun `get enrolled courses with no successful attempts returns empty list`() {
+            val token = signupAndGetToken()
+
+            // 세션 시작
+            mockMvc.perform(
+                post("/api/practice/start")
+                    .header("Authorization", "Bearer $token"),
+            )
+
+            // 강의 시도 - 실패 (느린 반응)
+            mockTimeProvider.setTime(1000035000L)
+            val request =
+                PracticeAttemptRequest(
+                    courseId = savedCourse.id!!,
+                    totalCompetitors = 100,
+                    capacity = 10,
+                )
+            mockMvc.perform(
+                post("/api/practice/attempt")
+                    .header("Authorization", "Bearer $token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)),
+            )
+
+            // 세션 종료
+            mockMvc.perform(
+                post("/api/practice/end")
+                    .header("Authorization", "Bearer $token"),
+            )
+
+            // 성공한 강의 목록 조회 - 빈 리스트
+            mockMvc
+                .perform(
+                    get("/api/practice/enrolled-courses")
+                        .header("Authorization", "Bearer $token"),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.length()").value(0))
+        }
+
+        @Test
+        @DisplayName("인증 없이 성공한 강의 조회 시 401 반환")
+        fun `get enrolled courses without authentication returns 401`() {
+            mockMvc
+                .perform(
+                    get("/api/practice/enrolled-courses"),
+                ).andExpect(status().isUnauthorized)
+        }
+
+        // ==================== 시간 중복 검증 테스트 ====================
+
+        @Test
+        @DisplayName("시간이 겹치는 강의 시도 시 실패")
+        fun `attempt practice with time conflict returns failure`() {
+            val token = signupAndGetToken()
+
+            // 시간 정보가 있는 강의 생성 (월요일 10:00~11:50)
+            val course1 =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "TIME001",
+                        lectureNumber = "001",
+                        courseTitle = "월요일 오전 강의",
+                        quota = 100,
+                        instructor = "박교수",
+                        placeAndTime = """{"time": "월(10:00~11:50)"}""",
+                    ),
+                )
+
+            // 시간이 겹치는 강의 생성 (월요일 11:00~12:50)
+            val course2 =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "TIME002",
+                        lectureNumber = "001",
+                        courseTitle = "월요일 오전 겹치는 강의",
+                        quota = 100,
+                        instructor = "이교수",
+                        placeAndTime = """{"time": "월(11:00~12:50)"}""",
+                    ),
+                )
+
+            // 세션 시작
+            mockMvc.perform(
+                post("/api/practice/start")
+                    .header("Authorization", "Bearer $token"),
+            )
+
+            // 첫 번째 강의 시도 - 성공
+            mockTimeProvider.setTime(1000030050L)
+            val request1 =
+                PracticeAttemptRequest(
+                    courseId = course1.id!!,
+                    totalCompetitors = 100,
+                    capacity = 80,
+                )
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request1)),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.isSuccess").value(true))
+
+            // 두 번째 강의 시도 - 시간 중복으로 실패
+            mockTimeProvider.setTime(1000030100L)
+            val request2 =
+                PracticeAttemptRequest(
+                    courseId = course2.id!!,
+                    totalCompetitors = 100,
+                    capacity = 80,
+                )
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request2)),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.message").value("시간이 겹치는 강의는 수강신청할 수 없습니다"))
+        }
+
+        @Test
+        @DisplayName("시간이 겹치지 않는 강의는 정상 수강신청")
+        fun `attempt practice without time conflict succeeds`() {
+            val token = signupAndGetToken()
+
+            // 시간 정보가 있는 강의 생성 (월요일 10:00~11:50)
+            val course1 =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "TIME003",
+                        lectureNumber = "001",
+                        courseTitle = "월요일 오전 강의",
+                        quota = 100,
+                        instructor = "박교수",
+                        placeAndTime = """{"time": "월(10:00~11:50)"}""",
+                    ),
+                )
+
+            // 시간이 겹치지 않는 강의 생성 (화요일 10:00~11:50)
+            val course2 =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "TIME004",
+                        lectureNumber = "001",
+                        courseTitle = "화요일 오전 강의",
+                        quota = 100,
+                        instructor = "이교수",
+                        placeAndTime = """{"time": "화(10:00~11:50)"}""",
+                    ),
+                )
+
+            // 세션 시작
+            mockMvc.perform(
+                post("/api/practice/start")
+                    .header("Authorization", "Bearer $token"),
+            )
+
+            // 첫 번째 강의 시도 - 성공
+            mockTimeProvider.setTime(1000030050L)
+            val request1 =
+                PracticeAttemptRequest(
+                    courseId = course1.id!!,
+                    totalCompetitors = 100,
+                    capacity = 80,
+                )
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request1)),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.isSuccess").value(true))
+
+            // 두 번째 강의 시도 - 시간 중복 없이 성공
+            mockTimeProvider.setTime(1000030100L)
+            val request2 =
+                PracticeAttemptRequest(
+                    courseId = course2.id!!,
+                    totalCompetitors = 100,
+                    capacity = 80,
+                )
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request2)),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.message").value("수강신청에 성공했습니다"))
+        }
+
+        @Test
+        @DisplayName("실패한 강의와는 시간 중복 검증하지 않음")
+        fun `time conflict check does not apply to failed courses`() {
+            val token = signupAndGetToken()
+
+            // 시간 정보가 있는 강의 생성 (월요일 10:00~11:50)
+            val course1 =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "TIME005",
+                        lectureNumber = "001",
+                        courseTitle = "월요일 오전 강의 (실패용)",
+                        quota = 100,
+                        instructor = "박교수",
+                        placeAndTime = """{"time": "월(10:00~11:50)"}""",
+                    ),
+                )
+
+            // 시간이 겹치는 강의 생성 (월요일 11:00~12:50)
+            val course2 =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "TIME006",
+                        lectureNumber = "001",
+                        courseTitle = "월요일 오전 겹치는 강의",
+                        quota = 100,
+                        instructor = "이교수",
+                        placeAndTime = """{"time": "월(11:00~12:50)"}""",
+                    ),
+                )
+
+            // 세션 시작
+            mockMvc.perform(
+                post("/api/practice/start")
+                    .header("Authorization", "Bearer $token"),
+            )
+
+            // 첫 번째 강의 시도 - 실패 (느린 반응, 정원 초과)
+            mockTimeProvider.setTime(1000035000L)
+            val request1 =
+                PracticeAttemptRequest(
+                    courseId = course1.id!!,
+                    totalCompetitors = 100,
+                    capacity = 10,
+                )
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request1)),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.isSuccess").value(false))
+                .andExpect(jsonPath("$.message").value("정원이 초과되었습니다"))
+
+            // 두 번째 강의 시도 - 첫 번째가 실패했으므로 시간 중복 검증 안 함, 성공 가능
+            mockTimeProvider.setTime(1000030050L)
+            val request2 =
+                PracticeAttemptRequest(
+                    courseId = course2.id!!,
+                    totalCompetitors = 100,
+                    capacity = 80,
+                )
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request2)),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.message").value("수강신청에 성공했습니다"))
         }
     }
