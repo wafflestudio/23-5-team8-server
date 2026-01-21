@@ -8,6 +8,7 @@ import com.wafflestudio.team8server.leaderboard.dto.LeaderboardTopResponse
 import com.wafflestudio.team8server.leaderboard.dto.MyLeaderboardResponse
 import com.wafflestudio.team8server.leaderboard.service.LeaderboardService
 import com.wafflestudio.team8server.user.repository.UserRepository
+import com.wafflestudio.team8server.user.service.ProfileImageUrlResolver
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController
 class LeaderboardController(
     private val leaderboardService: LeaderboardService,
     private val userRepository: UserRepository,
+    private val profileImageUrlResolver: ProfileImageUrlResolver,
 ) {
     @Operation(
         summary = "상위 n명 리더보드 조회",
@@ -97,7 +99,7 @@ class LeaderboardController(
                     LeaderboardEntryResponse(
                         userId = user.id ?: return@mapNotNull null,
                         nickname = user.nickname,
-                        profileImageUrl = user.profileImageUrl,
+                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
                         value = value.toDouble(),
                     )
                 },
@@ -111,7 +113,7 @@ class LeaderboardController(
                     LeaderboardEntryResponse(
                         userId = user.id ?: return@mapNotNull null,
                         nickname = user.nickname,
-                        profileImageUrl = user.profileImageUrl,
+                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
                         value = value.toDouble(),
                     )
                 },
@@ -125,7 +127,7 @@ class LeaderboardController(
                     LeaderboardEntryResponse(
                         userId = user.id ?: return@mapNotNull null,
                         nickname = user.nickname,
-                        profileImageUrl = user.profileImageUrl,
+                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
                         value = value,
                     )
                 },
@@ -233,7 +235,7 @@ class LeaderboardController(
                     LeaderboardEntryResponse(
                         userId = user.id ?: return@mapNotNull null,
                         nickname = user.nickname,
-                        profileImageUrl = user.profileImageUrl,
+                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
                         value = value.toDouble(),
                     )
                 },
@@ -247,7 +249,7 @@ class LeaderboardController(
                     LeaderboardEntryResponse(
                         userId = user.id ?: return@mapNotNull null,
                         nickname = user.nickname,
-                        profileImageUrl = user.profileImageUrl,
+                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
                         value = value.toDouble(),
                     )
                 },
@@ -261,7 +263,7 @@ class LeaderboardController(
                     LeaderboardEntryResponse(
                         userId = user.id ?: return@mapNotNull null,
                         nickname = user.nickname,
-                        profileImageUrl = user.profileImageUrl,
+                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
                         value = value,
                     )
                 },

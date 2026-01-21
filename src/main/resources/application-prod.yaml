@@ -34,3 +34,11 @@ oauth:
     token-uri: https://oauth2.googleapis.com/token
     issuer: https://accounts.google.com
     jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+
+# AWS S3 설정 (prod 환경에서만 활성화)
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    region: ${AWS_S3_REGION:ap-northeast-2}
+    base-url: ${AWS_S3_BASE_URL}
+    presigned-url-expiration-minutes: ${AWS_S3_PRESIGNED_URL_EXPIRATION_MINUTES:15}

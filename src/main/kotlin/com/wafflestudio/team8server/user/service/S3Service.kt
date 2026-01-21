@@ -1,6 +1,7 @@
 package com.wafflestudio.team8server.user.service
 
 import com.wafflestudio.team8server.config.S3Properties
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
@@ -10,16 +11,22 @@ import java.time.Duration
 import java.util.UUID
 
 @Service
+@Profile("prod")
 class S3Service(
     private val s3Client: S3Client,
     private val s3Presigner: S3Presigner,
     private val s3Properties: S3Properties,
 ) {
+    data class PresignedUrlResult(
+        val presignedUrl: String,
+        val imageUrl: String,
+    )
+
     fun generatePresignedUrl(
         userId: Long,
         extension: String,
         contentType: String,
-    ): String {
+    ): PresignedUrlResult {
         val key = generateKey(userId, extension)
 
         val putObjectRequest =
@@ -38,7 +45,10 @@ class S3Service(
                 .build()
 
         val presignedRequest = s3Presigner.presignPutObject(presignRequest)
-        return presignedRequest.url().toString()
+        return PresignedUrlResult(
+            presignedUrl = presignedRequest.url().toString(),
+            imageUrl = buildFullUrl(key),
+        )
     }
 
     fun deleteObject(key: String) {

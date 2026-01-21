@@ -2,11 +2,13 @@ package com.wafflestudio.team8server.config
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.presigner.S3Presigner
 
 @Configuration
+@Profile("prod")
 class S3Config(
     private val s3Properties: S3Properties,
 ) {
