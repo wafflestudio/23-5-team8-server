@@ -6,6 +6,7 @@ import com.wafflestudio.team8server.common.time.MockTimeProvider
 import com.wafflestudio.team8server.course.model.Course
 import com.wafflestudio.team8server.course.model.Semester
 import com.wafflestudio.team8server.course.repository.CourseRepository
+import com.wafflestudio.team8server.leaderboard.repository.LeaderboardRecordRepository
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeStartRequest
 import com.wafflestudio.team8server.practice.dto.VirtualStartTimeOption
@@ -15,6 +16,8 @@ import com.wafflestudio.team8server.practice.service.PracticeSessionService
 import com.wafflestudio.team8server.user.dto.SignupRequest
 import com.wafflestudio.team8server.user.repository.LocalCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
@@ -58,6 +61,7 @@ class PracticeControllerTest
         private val practiceDetailRepository: PracticeDetailRepository,
         private val courseRepository: CourseRepository,
         private val practiceSessionService: PracticeSessionService,
+        private val leaderboardRecordRepository: LeaderboardRecordRepository,
         private val mockTimeProvider: MockTimeProvider,
     ) {
         private lateinit var mockMvc: MockMvc
@@ -193,26 +197,44 @@ class PracticeControllerTest
         }
 
         @Test
-        @DisplayName("이미 진행 중인 세션이 있을 때 세션 시작 실패")
-        fun `start practice session fails when active session exists`() {
+        @DisplayName("이미 진행 중인 세션이 있을 때 기존 세션 종료 후 새 세션 시작")
+        fun `start practice session ends existing session and starts new one`() {
             val token = signupAndGetToken()
 
             // 첫 번째 세션 시작
-            mockMvc
-                .perform(
-                    post("/api/practice/start")
-                        .header("Authorization", "Bearer $token"),
-                ).andDo(failOn5xx())
+            val firstResult =
+                mockMvc
+                    .perform(
+                        post("/api/practice/start")
+                            .header("Authorization", "Bearer $token"),
+                    ).andDo(failOn5xx())
+                    .andExpect(status().isCreated)
+                    .andReturn()
 
-            // 두 번째 세션 시작 시도 (실패해야 함)
-            mockMvc
-                .perform(
-                    post("/api/practice/start")
-                        .header("Authorization", "Bearer $token"),
-                ).andDo(failOn5xx())
-                .andExpect(status().isConflict) // 409
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.errorCode").value("ACTIVE_SESSION_EXISTS"))
+            val firstPracticeLogId =
+                objectMapper
+                    .readTree(firstResult.response.contentAsString)
+                    .get("practiceLogId")
+                    .asLong()
+
+            // 두 번째 세션 시작 (기존 세션 종료 후 새 세션 시작)
+            val secondResult =
+                mockMvc
+                    .perform(
+                        post("/api/practice/start")
+                            .header("Authorization", "Bearer $token"),
+                    ).andDo(failOn5xx())
+                    .andExpect(status().isCreated)
+                    .andReturn()
+
+            val secondPracticeLogId =
+                objectMapper
+                    .readTree(secondResult.response.contentAsString)
+                    .get("practiceLogId")
+                    .asLong()
+
+            // 새로운 세션이 생성되었는지 확인
+            assertNotEquals(firstPracticeLogId, secondPracticeLogId)
         }
 
         @Test
@@ -1079,5 +1101,81 @@ class PracticeControllerTest
                 ).andExpect(status().isOk)
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.message").value("수강신청에 성공했습니다"))
+        }
+
+        /**
+         * 수동 테스트 전용:
+         * 세션 TTL 만료 시 Redis Keyspace Notification을 통해 리더보드가 자동 갱신되는지 확인합니다.
+         *
+         * 수동 테스트 방법:
+         * 1. @Disabled 어노테이션 제거
+         * 2. application-test.yml의 practice.session.time-limit-seconds를 6으로 변경
+         * 3. Redis 서버에서 notify-keyspace-events 설정이 "Ex"인지 확인
+         *    - redis-cli로 접속 후: CONFIG GET notify-keyspace-events
+         *    - 설정 안 되어 있으면: CONFIG SET notify-keyspace-events Ex
+         * 4. 테스트 실행하면 7초 대기 후 리더보드가 갱신되었는지 확인
+         */
+        @Test
+        @Disabled("Redis TTL 만료 및 Keyspace Notification 테스트. 수동 테스트 필요.")
+        @DisplayName("세션 TTL 만료 시 리더보드 자동 갱신 - 수동 테스트")
+        fun `leaderboard is updated when session expires by TTL`() {
+            val token = signupAndGetToken()
+
+            // 사용자 ID 조회 (LocalCredential을 통해)
+            val credential = localCredentialRepository.findByEmail("test@example.com")!!
+            val userId = credential.user.id!!
+
+            // 리더보드 초기 상태 확인 (없어야 함)
+            val initialRecord = leaderboardRecordRepository.findByUserId(userId)
+            println("초기 리더보드 레코드: $initialRecord")
+
+            // 세션 시작
+            val startResult =
+                mockMvc
+                    .perform(
+                        post("/api/practice/start")
+                            .header("Authorization", "Bearer $token"),
+                    ).andDo(failOn5xx())
+                    .andExpect(status().isCreated)
+                    .andReturn()
+
+            val practiceLogId =
+                objectMapper
+                    .readTree(startResult.response.contentAsString)
+                    .get("practiceLogId")
+                    .asLong()
+            println("세션 시작됨 - practiceLogId: $practiceLogId")
+
+            // 수강신청 시도 (리더보드 갱신 대상 데이터 생성)
+            mockTimeProvider.setTime(1000030050L) // 50ms 지연
+            val attemptRequest =
+                PracticeAttemptRequest(
+                    courseId = savedCourse.id!!,
+                    totalCompetitors = 100,
+                    capacity = 80,
+                )
+            mockMvc
+                .perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(attemptRequest)),
+                ).andDo(failOn5xx())
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.isSuccess").value(true))
+            println("수강신청 시도 완료")
+
+            // 세션 종료 API 호출하지 않고 TTL 만료 대기
+            println("TTL 만료 대기 중... (7초)")
+            Thread.sleep(7000)
+
+            // 리더보드 갱신 확인
+            val updatedRecord = leaderboardRecordRepository.findByUserId(userId)
+            println("갱신된 리더보드 레코드: $updatedRecord")
+            println("bestFirstReactionTime: ${updatedRecord?.bestFirstReactionTime}")
+
+            assertNotNull(updatedRecord, "리더보드 레코드가 생성되어야 합니다")
+            assertNotNull(updatedRecord?.bestFirstReactionTime, "bestFirstReactionTime이 갱신되어야 합니다")
+            println("테스트 성공: 세션 TTL 만료 시 리더보드가 자동 갱신되었습니다!")
         }
     }
