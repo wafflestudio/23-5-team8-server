@@ -13,6 +13,7 @@ import com.wafflestudio.team8server.user.repository.UserRepository
 import com.wafflestudio.team8server.user.service.social.google.GoogleIdTokenVerifier
 import com.wafflestudio.team8server.user.service.social.google.GoogleOAuthClient
 import com.wafflestudio.team8server.user.service.social.kakao.KakaoOAuthClient
+import com.wafflestudio.team8server.user.util.NicknameGenerator
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -53,7 +54,7 @@ class SocialAuthService(
         // 신규 회원인 경우 User 생성 및 저장
         val user =
             User(
-                nickname = kakaoUserInfo.nickname ?: "kakaouser",
+                nickname = kakaoUserInfo.nickname ?: NicknameGenerator.generateRandomNickname(),
                 profileImageUrl = kakaoUserInfo.profileImageUrl,
             )
         val savedUser = userRepository.save(user)
@@ -111,7 +112,7 @@ class SocialAuthService(
 
         val user =
             User(
-                nickname = googleUserInfo.name ?: "googleuser",
+                nickname = googleUserInfo.name ?: NicknameGenerator.generateRandomNickname(),
                 profileImageUrl = googleUserInfo.picture,
             )
         val savedUser = userRepository.save(user)

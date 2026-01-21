@@ -13,6 +13,7 @@ import com.wafflestudio.team8server.user.model.LocalCredential
 import com.wafflestudio.team8server.user.model.User
 import com.wafflestudio.team8server.user.repository.LocalCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
+import com.wafflestudio.team8server.user.util.NicknameGenerator
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -33,9 +34,10 @@ class AuthService(
         }
 
         // 2. User 엔티티 생성 및 저장
+        val nickname = request.nickname?.takeIf { it.isNotBlank() } ?: NicknameGenerator.generateRandomNickname()
         val user =
             User(
-                nickname = request.nickname,
+                nickname = nickname,
                 profileImageUrl = request.profileImageUrl,
             )
         val savedUser = userRepository.save(user) // id가 0 → DB가 부여한 실제 ID로 변경됨
