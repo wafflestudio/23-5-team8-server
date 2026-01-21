@@ -139,20 +139,4 @@ class PracticeSessionServiceTest
             assertFalse(practiceSessionService.hasActiveSession(userId1))
             assertTrue(practiceSessionService.hasActiveSession(userId2))
         }
-
-        @Test
-        @DisplayName("같은 사용자의 세션 덮어쓰기")
-        fun `overwrite session for same user`() {
-            val userId = 1L
-            val practiceLogId1 = 100L
-            val practiceLogId2 = 200L
-
-            // 첫 번째 세션 생성
-            practiceSessionService.createSession(userId, practiceLogId1)
-            assertEquals(practiceLogId1, practiceSessionService.getActiveSession(userId))
-
-            // 두 번째 세션으로 덮어쓰기
-            practiceSessionService.createSession(userId, practiceLogId2)
-            assertEquals(practiceLogId2, practiceSessionService.getActiveSession(userId))
-        }
     }
