@@ -357,7 +357,7 @@ class PracticeService(
             practiceLogRepository.findFirstByUserIdOrderByPracticeAtDesc(userId)
                 ?: throw ResourceNotFoundException("연습 기록이 없습니다")
 
-        val practiceLogId = practiceLog.id.ensureNotNull("연습 기록 ID가 없습니다")
+        val practiceLogId = practiceLog.id.ensureNotNull()
 
         // 2. 해당 세션의 성공한 시도들 조회
         val successfulDetails =

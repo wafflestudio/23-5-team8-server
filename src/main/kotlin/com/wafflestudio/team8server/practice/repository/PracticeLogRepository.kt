@@ -10,4 +10,6 @@ interface PracticeLogRepository : JpaRepository<PracticeLog, Long> {
         userId: Long,
         pageable: Pageable,
     ): Page<PracticeLog>
+
+    fun findFirstByUserIdOrderByPracticeAtDesc(userId: Long): PracticeLog?
 }
