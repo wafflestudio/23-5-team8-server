@@ -38,7 +38,6 @@ class AuthService(
         val user =
             User(
                 nickname = nickname,
-                profileImageUrl = request.profileImageUrl,
             )
         val savedUser = userRepository.save(user) // id가 0 → DB가 부여한 실제 ID로 변경됨
 
@@ -59,7 +58,7 @@ class AuthService(
         // 5. 응답 DTO 반환
         return SignupResponse(
             accessToken = accessToken,
-            user = UserDto.from(user),
+            user = UserDto.from(savedUser),
         )
     }
 

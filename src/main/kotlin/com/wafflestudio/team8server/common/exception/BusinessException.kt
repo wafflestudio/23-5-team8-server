@@ -82,3 +82,10 @@ class TimeConflictInPreEnrollException(
         message = message,
         errorCode = "TIME_CONFLICT_IN_PRE_ENROLL",
     )
+
+class UserNotFoundException(
+    userId: Long,
+) : BusinessException(
+        message = "사용자를 찾을 수 없습니다: $userId",
+        errorCode = "USER_NOT_FOUND",
+    )
