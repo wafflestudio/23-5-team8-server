@@ -68,7 +68,6 @@ class PreEnrollControllerTest
                     email = actualEmail,
                     password = "Test1234!",
                     nickname = "테스터",
-                    profileImageUrl = null,
                 )
 
             val response =
