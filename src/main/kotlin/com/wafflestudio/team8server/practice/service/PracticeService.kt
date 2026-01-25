@@ -352,9 +352,9 @@ class PracticeService(
      */
     @Transactional(readOnly = true)
     fun getEnrolledCourses(userId: Long): List<CourseDetailResponse> {
-        // 1. 가장 최근 PracticeLog 조회
+        // 1. attempt가 존재하는 가장 최근 PracticeLog 조회
         val practiceLog =
-            practiceLogRepository.findFirstByUserIdOrderByPracticeAtDesc(userId)
+            practiceLogRepository.findFirstByUserIdWithAttemptsOrderByPracticeAtDesc(userId)
                 ?: throw ResourceNotFoundException("연습 기록이 없습니다")
 
         val practiceLogId = practiceLog.id.ensureNotNull()
