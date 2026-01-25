@@ -38,8 +38,15 @@ class PreEnrollService(
             }
 
         return filtered
-            .sortedWith(compareBy({ it.course.courseNumber }, { it.course.lectureNumber }))
-            .map { preEnroll ->
+            .sortedWith(
+                if (overQuotaOnly) {
+                    compareByDescending<PreEnroll> { it.cartCount.toDouble() / it.course.quota.toDouble() }
+                        .thenBy { it.course.courseNumber }
+                        .thenBy { it.course.lectureNumber }
+                } else {
+                    compareBy({ it.course.courseNumber }, { it.course.lectureNumber })
+                },
+            ).map { preEnroll ->
                 val course = preEnroll.course
 
                 PreEnrollCourseResponse(

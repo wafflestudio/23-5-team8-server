@@ -40,7 +40,7 @@ class PreEnrollController(
             """
             로그인한 사용자의 장바구니(pre-enroll) 목록을 조회합니다.
 
-            - overQuotaOnly=true 인 경우, cartCount > quota 인 강의만 반환합니다.
+            - overQuotaOnly=true 인 경우, cartCount > quota 인 강의만 경쟁률 내림차순으로 반환합니다.
             - 반환되는 객체는 Course 엔티티의 모든 필드를 포함합니다.
             """,
         security = [SecurityRequirement(name = "Bearer Authentication")],
