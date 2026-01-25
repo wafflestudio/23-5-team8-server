@@ -14,15 +14,6 @@ spring:
       max-file-size: 20MB
       max-request-size: 20MB
 
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-
-server:
-  port: ${SERVER_PORT:8080}
-
 oauth:
   kakao:
     client-id: ${KAKAO_CLIENT_ID:}

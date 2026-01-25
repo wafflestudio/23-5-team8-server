@@ -75,6 +75,8 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_S3_BASE_URL: ${{ secrets.AWS_S3_BASE_URL }}
         run: |
           envsubst < k8s/backend.yaml | kubectl apply -f -
           kubectl rollout restart deployment/backend-app
