@@ -15,5 +15,8 @@ class TestcontainersConfiguration {
 
     @Bean
     @ServiceConnection(name = "redis")
-    fun redisContainer(): GenericContainer<*> = GenericContainer(DockerImageName.parse("redis:latest")).withExposedPorts(6379)
+    fun redisContainer(): GenericContainer<*> =
+        GenericContainer(
+            DockerImageName.parse("redis:latest"),
+        ).withExposedPorts(6379).withCommand("redis-server", "--notify-keyspace-events", "Ex")
 }

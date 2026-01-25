@@ -62,9 +62,14 @@ class PracticeService(
         }
 
         try {
-            // 2. 이미 활성 세션이 있는지 확인
-            if (practiceSessionService.hasActiveSession(userId)) {
-                throw ActiveSessionExistsException()
+            // 2. 이미 활성 세션이 있으면 리더보드 갱신 후 종료
+            val existingPracticeLogId = practiceSessionService.getActiveSession(userId)
+            if (existingPracticeLogId != null) {
+                // 기존 세션의 리더보드 갱신
+                leaderboardService.updateByPracticeEnd(userId, existingPracticeLogId)
+                leaderboardService.updateWeeklyByPracticeEnd(userId, existingPracticeLogId)
+                // 기존 세션 종료
+                practiceSessionService.endSession(userId)
             }
 
             // 3. 사용자 조회
