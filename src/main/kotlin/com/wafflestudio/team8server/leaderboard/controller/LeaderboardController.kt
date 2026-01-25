@@ -272,7 +272,7 @@ class LeaderboardController(
                 LeaderboardEntryResponse(
                     userId = user.id ?: return@mapNotNull null,
                     nickname = user.nickname,
-                    profileImageUrl = user.profileImageUrl,
+                    profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
                     value = value,
                 )
             }
@@ -303,7 +303,7 @@ class LeaderboardController(
                 LeaderboardEntryResponse(
                     userId = user.id ?: return@mapNotNull null,
                     nickname = user.nickname,
-                    profileImageUrl = user.profileImageUrl,
+                    profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
                     value = value,
                 )
             }
