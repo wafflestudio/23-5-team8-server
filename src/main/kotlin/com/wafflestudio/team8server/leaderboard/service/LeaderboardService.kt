@@ -1,5 +1,6 @@
 package com.wafflestudio.team8server.leaderboard.service
 
+import com.wafflestudio.team8server.common.exception.BadRequestException
 import com.wafflestudio.team8server.common.exception.ResourceForbiddenException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.leaderboard.model.LeaderboardRecord
@@ -8,6 +9,7 @@ import com.wafflestudio.team8server.leaderboard.repository.LeaderboardRecordRepo
 import com.wafflestudio.team8server.leaderboard.repository.WeeklyLeaderboardRecordRepository
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
 import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
+import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -15,15 +17,14 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class LeaderboardService(
     private val leaderboardRecordRepository: LeaderboardRecordRepository,
-    private val weelyLeaderboardRecordRepository: LeaderboardRecordRepository,
+    private val weeklyLeaderboardRecordRepository: WeeklyLeaderboardRecordRepository,
     private val practiceLogRepository: PracticeLogRepository,
     private val practiceDetailRepository: PracticeDetailRepository,
-    private val weeklyLeaderboardRecordRepository: WeeklyLeaderboardRecordRepository,
 ) {
     data class LeaderboardTopResult(
-        val topFirstReactionTime: List<LeaderboardRecord>,
-        val topSecondReactionTime: List<LeaderboardRecord>,
-        val topCompetitionRate: List<LeaderboardRecord>,
+        val topFirstReactionTime: Page<LeaderboardRecord>,
+        val topSecondReactionTime: Page<LeaderboardRecord>,
+        val topCompetitionRate: Page<LeaderboardRecord>,
     )
 
     data class MyLeaderboardResult(
@@ -36,9 +37,18 @@ class LeaderboardService(
     )
 
     @Transactional(readOnly = true)
-    fun getTopResult(limit: Int): LeaderboardTopResult {
-        val safeLimit = limit.coerceIn(1, 100)
-        val pageable = PageRequest.of(0, safeLimit)
+    fun getTopResult(
+        page: Int,
+        size: Int,
+    ): LeaderboardTopResult {
+        if (page < 0) {
+            throw BadRequestException("page는 0 이상이어야 합니다.")
+        }
+        if (size !in 1..100) {
+            throw BadRequestException("size의 범위는 1-100입니다.")
+        }
+
+        val pageable = PageRequest.of(page, size)
 
         return LeaderboardTopResult(
             topFirstReactionTime = leaderboardRecordRepository.findTopByBestFirstReactionTime(pageable),
@@ -69,15 +79,24 @@ class LeaderboardService(
     }
 
     data class WeeklyLeaderboardTopResult(
-        val topFirstReactionTime: List<WeeklyLeaderboardRecord>,
-        val topSecondReactionTime: List<WeeklyLeaderboardRecord>,
-        val topCompetitionRate: List<WeeklyLeaderboardRecord>,
+        val topFirstReactionTime: Page<WeeklyLeaderboardRecord>,
+        val topSecondReactionTime: Page<WeeklyLeaderboardRecord>,
+        val topCompetitionRate: Page<WeeklyLeaderboardRecord>,
     )
 
     @Transactional(readOnly = true)
-    fun getWeeklyTopResult(limit: Int): WeeklyLeaderboardTopResult {
-        val safeLimit = limit.coerceIn(1, 100)
-        val pageable = PageRequest.of(0, safeLimit)
+    fun getWeeklyTopResult(
+        page: Int,
+        size: Int,
+    ): WeeklyLeaderboardTopResult {
+        if (page < 0) {
+            throw BadRequestException("page는 0 이상이어야 합니다.")
+        }
+        if (size !in 1..100) {
+            throw BadRequestException("size의 범위는 1-100입니다.")
+        }
+
+        val pageable = PageRequest.of(page, size)
 
         return WeeklyLeaderboardTopResult(
             topFirstReactionTime = weeklyLeaderboardRecordRepository.findTopByBestFirstReactionTime(pageable),
