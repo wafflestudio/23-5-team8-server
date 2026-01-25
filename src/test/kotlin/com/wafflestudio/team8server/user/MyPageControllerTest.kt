@@ -419,12 +419,14 @@ class MyPageControllerTest
                     )
 
                 // 3개의 연습 세션 생성 (각 세션마다 시도 하나씩)
-                repeat(3) {
+                repeat(3) { i ->
                     mockMvc.perform(
                         post("/api/practice/start")
                             .header("Authorization", "Bearer $token"),
                     )
 
+                    // 각 세션마다 다른 시간으로 설정 (attempt 성공을 위해 시간 전진 필요)
+                    mockTimeProvider.setTime(1000030050L + i * 100000L)
                     val request =
                         PracticeAttemptRequest(
                             courseId = course.id!!,
