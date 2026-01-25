@@ -82,3 +82,18 @@ class TimeConflictInPreEnrollException(
         message = message,
         errorCode = "TIME_CONFLICT_IN_PRE_ENROLL",
     )
+
+class UserNotFoundException(
+    userId: Long,
+) : BusinessException(
+        message = "사용자를 찾을 수 없습니다: $userId",
+        errorCode = "USER_NOT_FOUND",
+    )
+
+// S3 서비스가 설정되지 않은 경우 (로컬/테스트 환경)
+class S3NotConfiguredException(
+    message: String = "S3가 설정되지 않았습니다. 이 기능은 prod 환경에서만 사용 가능합니다.",
+) : BusinessException(
+        message = message,
+        errorCode = "S3_NOT_CONFIGURED",
+    )

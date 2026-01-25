@@ -1,8 +1,8 @@
 package com.wafflestudio.team8server.user.service
 
 import com.wafflestudio.team8server.common.dto.PageInfo
-import com.wafflestudio.team8server.common.exception.BadRequestException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
+import com.wafflestudio.team8server.common.exception.S3NotConfiguredException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
 import com.wafflestudio.team8server.common.extension.ensureNotNull
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResult
@@ -13,9 +13,13 @@ import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
 import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
 import com.wafflestudio.team8server.user.dto.ChangePasswordRequest
 import com.wafflestudio.team8server.user.dto.MyPageResponse
+import com.wafflestudio.team8server.user.dto.PresignedUrlRequest
+import com.wafflestudio.team8server.user.dto.PresignedUrlResponse
+import com.wafflestudio.team8server.user.dto.UpdateProfileImageRequest
 import com.wafflestudio.team8server.user.dto.UpdateProfileRequest
 import com.wafflestudio.team8server.user.repository.LocalCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -29,6 +33,9 @@ class MyPageService(
     private val passwordEncoder: PasswordEncoder,
     private val practiceLogRepository: PracticeLogRepository,
     private val practiceDetailRepository: PracticeDetailRepository,
+    private val profileImageUrlResolver: ProfileImageUrlResolver,
+    @Autowired(required = false)
+    private val s3Service: S3Service?,
 ) {
     @Transactional(readOnly = true)
     fun getMyPage(userId: Long): MyPageResponse {
@@ -36,7 +43,7 @@ class MyPageService(
             userRepository
                 .findById(userId)
                 .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
-        return MyPageResponse.from(user)
+        return MyPageResponse.from(user, profileImageUrlResolver)
     }
 
     @Transactional
@@ -44,19 +51,14 @@ class MyPageService(
         userId: Long,
         request: UpdateProfileRequest,
     ): MyPageResponse {
-        if (request.nickname == null && request.profileImageUrl == null) {
-            throw BadRequestException("수정할 항목이 없습니다")
-        }
-
         val user =
             userRepository
                 .findById(userId)
                 .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
 
-        request.nickname?.let { user.nickname = it }
-        request.profileImageUrl?.let { user.profileImageUrl = it }
+        user.nickname = request.nickname
 
-        return MyPageResponse.from(user)
+        return MyPageResponse.from(user, profileImageUrlResolver)
     }
 
     @Transactional
@@ -158,5 +160,59 @@ class MyPageService(
             successCount = successCount,
             attempts = attempts,
         )
+    }
+
+    fun generatePresignedUrl(
+        userId: Long,
+        request: PresignedUrlRequest,
+    ): PresignedUrlResponse {
+        val service = s3Service ?: throw S3NotConfiguredException()
+        val result =
+            service.generatePresignedUrl(
+                userId = userId,
+                extension = request.extension,
+                contentType = request.contentType,
+            )
+        return PresignedUrlResponse(
+            presignedUrl = result.presignedUrl,
+            imageUrl = result.imageUrl,
+        )
+    }
+
+    @Transactional
+    fun updateProfileImage(
+        userId: Long,
+        request: UpdateProfileImageRequest,
+    ) {
+        val service = s3Service ?: throw S3NotConfiguredException()
+        val user =
+            userRepository
+                .findById(userId)
+                .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
+
+        // 기존 이미지가 있으면 S3에서 삭제
+        user.profileImageUrl?.let { existingKey ->
+            service.deleteObject(existingKey)
+        }
+
+        // 새 이미지 URL에서 key 추출 후 저장
+        val newKey = service.extractKeyFromUrl(request.imageUrl)
+        user.profileImageUrl = newKey
+    }
+
+    @Transactional
+    fun deleteProfileImage(userId: Long) {
+        val service = s3Service ?: throw S3NotConfiguredException()
+        val user =
+            userRepository
+                .findById(userId)
+                .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
+
+        // 기존 이미지가 있으면 S3에서 삭제
+        user.profileImageUrl?.let { existingKey ->
+            service.deleteObject(existingKey)
+        }
+
+        user.profileImageUrl = null
     }
 }

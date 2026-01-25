@@ -82,14 +82,12 @@ class MyPageControllerTest
         private fun signupAndGetToken(
             email: String = "test@example.com",
             nickname: String = "테스터",
-            profileImageUrl: String? = null,
         ): String {
             val signupRequest =
                 SignupRequest(
                     email = email,
                     password = "Test1234!",
                     nickname = nickname,
-                    profileImageUrl = profileImageUrl,
                 )
 
             val response =
@@ -112,7 +110,7 @@ class MyPageControllerTest
             @Test
             @DisplayName("마이페이지 조회 성공")
             fun `get mypage returns user profile`() {
-                val token = signupAndGetToken(nickname = "홍길동", profileImageUrl = "https://example.com/image.jpg")
+                val token = signupAndGetToken(nickname = "홍길동")
 
                 mockMvc
                     .perform(
@@ -120,7 +118,6 @@ class MyPageControllerTest
                             .header("Authorization", "Bearer $token"),
                     ).andExpect(status().isOk)
                     .andExpect(jsonPath("$.nickname").value("홍길동"))
-                    .andExpect(jsonPath("$.profileImageUrl").value("https://example.com/image.jpg"))
             }
 
             @Test
@@ -157,7 +154,7 @@ class MyPageControllerTest
             fun `update nickname successfully`() {
                 val token = signupAndGetToken(nickname = "기존닉네임")
 
-                val request = UpdateProfileRequest(nickname = "새닉네임", profileImageUrl = null)
+                val request = UpdateProfileRequest(nickname = "새닉네임")
 
                 mockMvc
                     .perform(
@@ -170,26 +167,9 @@ class MyPageControllerTest
             }
 
             @Test
-            @DisplayName("프로필 이미지 수정 성공")
-            fun `update profile image successfully`() {
-                val token = signupAndGetToken()
-
-                val request = UpdateProfileRequest(nickname = null, profileImageUrl = "https://new-image.com/pic.jpg")
-
-                mockMvc
-                    .perform(
-                        patch("/api/mypage/profile")
-                            .header("Authorization", "Bearer $token")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)),
-                    ).andExpect(status().isOk)
-                    .andExpect(jsonPath("$.profileImageUrl").value("https://new-image.com/pic.jpg"))
-            }
-
-            @Test
             @DisplayName("인증 없이 프로필 수정 시 401 반환")
             fun `update profile without auth returns 401`() {
-                val request = UpdateProfileRequest(nickname = "새닉네임", profileImageUrl = null)
+                val request = UpdateProfileRequest(nickname = "새닉네임")
 
                 mockMvc
                     .perform(

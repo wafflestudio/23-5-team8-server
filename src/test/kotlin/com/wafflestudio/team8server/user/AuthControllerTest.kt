@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -43,8 +44,12 @@ class AuthControllerTest
 
         @BeforeEach
         fun setUp() {
-            // WebApplicationContext로부터 MockMvc 빌드
-            mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build()
+            // WebApplicationContext로부터 MockMvc 빌드 (Spring Security 적용)
+            mockMvc =
+                MockMvcBuilders
+                    .webAppContextSetup(webApplicationContext)
+                    .apply<org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder>(springSecurity())
+                    .build()
             localCredentialRepository.deleteAll()
             userRepository.deleteAll()
         }
@@ -57,7 +62,6 @@ class AuthControllerTest
                     email = "test@example.com",
                     password = "Test1234!", // 영문+숫자+특수문자
                     nickname = "테스터",
-                    profileImageUrl = null,
                 )
 
             mockMvc
@@ -78,7 +82,6 @@ class AuthControllerTest
                     email = "user@test.com",
                     password = "SecurePass123!",
                     nickname = "유저",
-                    profileImageUrl = "https://example.com/profile.jpg",
                 )
 
             mockMvc
@@ -329,48 +332,48 @@ class AuthControllerTest
                 .andExpect(jsonPath("$.validationErrors.code").exists())
         }
 
-        // 실제 인증이 필요한 엔드포인트 구현 후 활성화 가능
-        // @Test
-        // @DisplayName("로그아웃 후 해당 토큰으로 인증 API 호출 시 401 반환")
+        @Test
+        @DisplayName("로그아웃 후 해당 토큰으로 인증 API 호출 시 401 반환")
         fun `blacklisted token cannot access protected resources`() {
+            // 회원가입하고 토큰 받기
             val signupRequest =
                 SignupRequest(
                     email = "blacklist@test.com",
                     password = "Password1!",
-                    nickname = "블랙리스트테스터",
+                    nickname = "테스터",
                 )
-            mockMvc.perform(
-                post("/api/auth/signup")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(signupRequest)),
-            )
-
-            val loginRequest =
-                LoginRequest(
-                    email = "blacklist@test.com",
-                    password = "Password1!",
-                )
-            val loginResponse =
+            val signupResponse =
                 mockMvc
                     .perform(
-                        post("/api/auth/login")
+                        post("/api/auth/signup")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(loginRequest)),
-                    ).andReturn()
+                            .content(objectMapper.writeValueAsString(signupRequest)),
+                    ).andDo(print())
+                    .andExpect(status().isCreated)
+                    .andReturn()
 
-            val responseBody = loginResponse.response.contentAsString
+            val responseBody = signupResponse.response.contentAsString
             val accessToken = objectMapper.readTree(responseBody).get("accessToken").asText()
 
-            // 로그아웃
-            mockMvc.perform(
-                post("/api/auth/logout")
-                    .header("Authorization", "Bearer $accessToken"),
-            )
-
+            // 로그아웃 전 마이페이지 접근 가능 확인
             mockMvc
                 .perform(
-                    get("/api/protected")
+                    get("/api/mypage")
                         .header("Authorization", "Bearer $accessToken"),
-                ).andExpect(status().isUnauthorized) // 401 (Spring Security가 차단)
+                ).andExpect(status().isOk)
+
+            // 로그아웃
+            mockMvc
+                .perform(
+                    post("/api/auth/logout")
+                        .header("Authorization", "Bearer $accessToken"),
+                ).andExpect(status().isNoContent)
+
+            // 로그아웃 후 같은 토큰으로 마이페이지 접근 시 401
+            mockMvc
+                .perform(
+                    get("/api/mypage")
+                        .header("Authorization", "Bearer $accessToken"),
+                ).andExpect(status().isUnauthorized)
         }
     }
