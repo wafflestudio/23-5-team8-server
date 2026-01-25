@@ -425,7 +425,6 @@ class MyPageControllerTest
                             .header("Authorization", "Bearer $token"),
                     )
 
-                    mockTimeProvider.setTime(1000030050L)
                     val request =
                         PracticeAttemptRequest(
                             courseId = course.id!!,
