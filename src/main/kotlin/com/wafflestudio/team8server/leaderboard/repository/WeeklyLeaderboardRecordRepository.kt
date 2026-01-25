@@ -1,6 +1,7 @@
 package com.wafflestudio.team8server.leaderboard.repository
 
 import com.wafflestudio.team8server.leaderboard.model.WeeklyLeaderboardRecord
+import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
@@ -17,7 +18,7 @@ interface WeeklyLeaderboardRecordRepository : JpaRepository<WeeklyLeaderboardRec
             ORDER BY rec.bestFirstReactionTime ASC
         """,
     )
-    fun findTopByBestFirstReactionTime(pageable: Pageable): List<WeeklyLeaderboardRecord>
+    fun findTopByBestFirstReactionTime(pageable: Pageable): Page<WeeklyLeaderboardRecord>
 
     @Query(
         """
@@ -27,7 +28,7 @@ interface WeeklyLeaderboardRecordRepository : JpaRepository<WeeklyLeaderboardRec
             ORDER BY rec.bestSecondReactionTime ASC
         """,
     )
-    fun findTopByBestSecondReactionTime(pageable: Pageable): List<WeeklyLeaderboardRecord>
+    fun findTopByBestSecondReactionTime(pageable: Pageable): Page<WeeklyLeaderboardRecord>
 
     @Query(
         """
@@ -37,7 +38,7 @@ interface WeeklyLeaderboardRecordRepository : JpaRepository<WeeklyLeaderboardRec
             ORDER BY rec.bestCompetitionRate DESC
         """,
     )
-    fun findTopByBestCompetitionRate(pageable: Pageable): List<WeeklyLeaderboardRecord>
+    fun findTopByBestCompetitionRate(pageable: Pageable): Page<WeeklyLeaderboardRecord>
 
     @Query(
         """

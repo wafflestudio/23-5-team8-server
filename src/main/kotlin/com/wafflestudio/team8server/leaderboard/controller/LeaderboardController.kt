@@ -1,12 +1,16 @@
 package com.wafflestudio.team8server.leaderboard.controller
 
 import com.wafflestudio.team8server.common.auth.LoggedInUserId
+import com.wafflestudio.team8server.common.dto.PageInfo
 import com.wafflestudio.team8server.common.exception.ErrorResponse
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.leaderboard.dto.LeaderboardEntryResponse
-import com.wafflestudio.team8server.leaderboard.dto.LeaderboardTopResponse
+import com.wafflestudio.team8server.leaderboard.dto.LeaderboardPageRequest
+import com.wafflestudio.team8server.leaderboard.dto.LeaderboardPagedSectionResponse
+import com.wafflestudio.team8server.leaderboard.dto.LeaderboardTopPagedResponse
 import com.wafflestudio.team8server.leaderboard.dto.MyLeaderboardResponse
 import com.wafflestudio.team8server.leaderboard.service.LeaderboardService
+import com.wafflestudio.team8server.user.model.User
 import com.wafflestudio.team8server.user.repository.UserRepository
 import com.wafflestudio.team8server.user.service.ProfileImageUrlResolver
 import io.swagger.v3.oas.annotations.Operation
@@ -18,9 +22,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springdoc.core.annotations.ParameterObject
+import org.springframework.data.domain.Page
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "리더보드 API", description = "수강신청 연습 기록을 바탕으로 3가지 기준의 리더보드를 제공합니다.")
@@ -32,42 +37,49 @@ class LeaderboardController(
     private val profileImageUrlResolver: ProfileImageUrlResolver,
 ) {
     @Operation(
-        summary = "상위 n명 리더보드 조회",
+        summary = "리더보드 조회 (페이지네이션 적용)",
         description = """
-            저장된 리더보드 기록 중 3가지 기준의 상위 n명을 반환합니다.
+            저장된 리더보드 기록 중 3가지 기준의 순위 기록을 페이지네이션하여 반환합니다.
             
             기준:
             - topFirstReactionTime: 1픽(첫번째 수강신청) 최단 반응시간(ms)
             - topSecondReactionTime: 2픽(두번째 수강신청) 최단 반응시간(ms)
             - topCompetitionRate: 성공시켜 본 최고 경쟁률(total_competitors / capacity)
             
-            limit: 기본값 10, 범위 1~100
+            - page는 0부터 시작합니다.
+            - size의 범위는 1-100입니다.
         """,
     )
     @ApiResponses(
         value = [
             ApiResponse(
                 responseCode = "200",
-                description = "상위 n명 리더보드 조회 성공",
+                description = "리더보드 조회 성공",
                 content = [
                     Content(
-                        schema = Schema(implementation = LeaderboardTopResponse::class),
+                        schema = Schema(implementation = LeaderboardTopPagedResponse::class),
                         examples = [
                             ExampleObject(
-                                name = "leaderboard-top-success",
-                                summary = "상위 n명 응답 예시",
+                                name = "leaderboard-top-paged-success",
+                                summary = "페이지네이션 응답 예시",
                                 value = """
                                 {
-                                  "topFirstReactionTime": [
-                                    { "userId": 1, "nickname": "user1", "profileImageUrl": null, "value": 150.0 },
-                                    { "userId": 2, "nickname": "user2", "profileImageUrl": null, "value": 180.0 }
-                                  ],
-                                  "topSecondReactionTime": [
-                                    { "userId": 2, "nickname": "user2", "profileImageUrl": null, "value": 400.0 }
-                                  ],
-                                  "topCompetitionRate": [
-                                    { "userId": 3, "nickname": "user3", "profileImageUrl": null, "value": 4.8 }
-                                  ]
+                                  "topFirstReactionTime": {
+                                    "items": [
+                                      { "userId": 1, "nickname": "user1", "profileImageUrl": null, "value": 150.0 }
+                                    ],
+                                    "pageInfo": { "page": 0, "size": 10, "totalElements": 123, "totalPages": 13, "hasNext": true }
+                                  },
+                                  "topSecondReactionTime": {
+                                    "items": [],
+                                    "pageInfo": { "page": 0, "size": 10, "totalElements": 0, "totalPages": 0, "hasNext": false }
+                                  },
+                                  "topCompetitionRate": {
+                                    "items": [
+                                      { "userId": 3, "nickname": "user3", "profileImageUrl": null, "value": 4.8 }
+                                    ],
+                                    "pageInfo": { "page": 0, "size": 10, "totalElements": 55, "totalPages": 6, "hasNext": true }
+                                  }
                                 }
                                 """,
                             ),
@@ -79,58 +91,32 @@ class LeaderboardController(
     )
     @GetMapping
     fun getTop(
-        @Parameter(
-            description = "기준별 상위 N명을 조회합니다 (default: 10, max: 100)",
-            example = "10",
-        )
-        @RequestParam(required = false, defaultValue = "10")
-        limit: Int,
-    ): LeaderboardTopResponse {
-        val result = leaderboardService.getTopResult(limit)
+        @ParameterObject request: LeaderboardPageRequest,
+    ): LeaderboardTopPagedResponse {
+        val result = leaderboardService.getTopResult(page = request.page, size = request.size)
 
-        return LeaderboardTopResponse(
-            topFirstReactionTime =
-                result.topFirstReactionTime.mapNotNull { record ->
-                    val user =
-                        userRepository
-                            .findById(record.userId)
-                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
-                    val value = record.bestFirstReactionTime ?: return@mapNotNull null
-                    LeaderboardEntryResponse(
-                        userId = user.id ?: return@mapNotNull null,
-                        nickname = user.nickname,
-                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
-                        value = value.toDouble(),
-                    )
-                },
-            topSecondReactionTime =
-                result.topSecondReactionTime.mapNotNull { record ->
-                    val user =
-                        userRepository
-                            .findById(record.userId)
-                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
-                    val value = record.bestSecondReactionTime ?: return@mapNotNull null
-                    LeaderboardEntryResponse(
-                        userId = user.id ?: return@mapNotNull null,
-                        nickname = user.nickname,
-                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
-                        value = value.toDouble(),
-                    )
-                },
-            topCompetitionRate =
-                result.topCompetitionRate.mapNotNull { record ->
-                    val user =
-                        userRepository
-                            .findById(record.userId)
-                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
-                    val value = record.bestCompetitionRate ?: return@mapNotNull null
-                    LeaderboardEntryResponse(
-                        userId = user.id ?: return@mapNotNull null,
-                        nickname = user.nickname,
-                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
-                        value = value,
-                    )
-                },
+        val firstSection =
+            toSectionResponse(
+                page = result.topFirstReactionTime,
+                valueSelector = { it.bestFirstReactionTime?.toDouble() },
+            )
+
+        val secondSection =
+            toSectionResponse(
+                page = result.topSecondReactionTime,
+                valueSelector = { it.bestSecondReactionTime?.toDouble() },
+            )
+
+        val rateSection =
+            toSectionResponse(
+                page = result.topCompetitionRate,
+                valueSelector = { it.bestCompetitionRate },
+            )
+
+        return LeaderboardTopPagedResponse(
+            topFirstReactionTime = firstSection,
+            topSecondReactionTime = secondSection,
+            topCompetitionRate = rateSection,
         )
     }
 
@@ -211,7 +197,7 @@ class LeaderboardController(
     }
 
     @Operation(
-        summary = "주간 상위 n명 리더보드 조회",
+        summary = "주간 리더보드 조회 (페이지네이션 적용)",
         description = """
             주간 리더보드는 매주 월요일 00:00(Asia/Seoul)에 초기화됩니다.
             이외 API 세부 사항은 전체 리더보드 조회와 동일합니다.
@@ -219,54 +205,32 @@ class LeaderboardController(
     )
     @GetMapping("/weekly")
     fun getWeeklyTop(
-        @RequestParam(required = false, defaultValue = "10")
-        limit: Int,
-    ): LeaderboardTopResponse {
-        val result = leaderboardService.getWeeklyTopResult(limit)
+        @ParameterObject request: LeaderboardPageRequest,
+    ): LeaderboardTopPagedResponse {
+        val result = leaderboardService.getWeeklyTopResult(page = request.page, size = request.size)
 
-        return LeaderboardTopResponse(
-            topFirstReactionTime =
-                result.topFirstReactionTime.mapNotNull { record ->
-                    val user =
-                        userRepository
-                            .findById(record.userId)
-                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
-                    val value = record.bestFirstReactionTime ?: return@mapNotNull null
-                    LeaderboardEntryResponse(
-                        userId = user.id ?: return@mapNotNull null,
-                        nickname = user.nickname,
-                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
-                        value = value.toDouble(),
-                    )
-                },
-            topSecondReactionTime =
-                result.topSecondReactionTime.mapNotNull { record ->
-                    val user =
-                        userRepository
-                            .findById(record.userId)
-                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
-                    val value = record.bestSecondReactionTime ?: return@mapNotNull null
-                    LeaderboardEntryResponse(
-                        userId = user.id ?: return@mapNotNull null,
-                        nickname = user.nickname,
-                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
-                        value = value.toDouble(),
-                    )
-                },
-            topCompetitionRate =
-                result.topCompetitionRate.mapNotNull { record ->
-                    val user =
-                        userRepository
-                            .findById(record.userId)
-                            .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
-                    val value = record.bestCompetitionRate ?: return@mapNotNull null
-                    LeaderboardEntryResponse(
-                        userId = user.id ?: return@mapNotNull null,
-                        nickname = user.nickname,
-                        profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
-                        value = value,
-                    )
-                },
+        val firstSection =
+            toWeeklySectionResponse(
+                page = result.topFirstReactionTime,
+                valueSelector = { it.bestFirstReactionTime?.toDouble() },
+            )
+
+        val secondSection =
+            toWeeklySectionResponse(
+                page = result.topSecondReactionTime,
+                valueSelector = { it.bestSecondReactionTime?.toDouble() },
+            )
+
+        val rateSection =
+            toWeeklySectionResponse(
+                page = result.topCompetitionRate,
+                valueSelector = { it.bestCompetitionRate },
+            )
+
+        return LeaderboardTopPagedResponse(
+            topFirstReactionTime = firstSection,
+            topSecondReactionTime = secondSection,
+            topCompetitionRate = rateSection,
         )
     }
 
@@ -293,5 +257,84 @@ class LeaderboardController(
             bestCompetitionRate = result.bestCompetitionRate,
             bestCompetitionRateRank = result.bestCompetitionRateRank,
         )
+    }
+
+    private fun toSectionResponse(
+        page: Page<com.wafflestudio.team8server.leaderboard.model.LeaderboardRecord>,
+        valueSelector: (com.wafflestudio.team8server.leaderboard.model.LeaderboardRecord) -> Double?,
+    ): LeaderboardPagedSectionResponse {
+        val usersById = loadUsersById(page.content.map { it.userId })
+
+        val items =
+            page.content.mapNotNull { record ->
+                val value = valueSelector(record) ?: return@mapNotNull null
+                val user = usersById[record.userId] ?: throw ResourceNotFoundException("사용자를 찾을 수 없습니다")
+                LeaderboardEntryResponse(
+                    userId = user.id ?: return@mapNotNull null,
+                    nickname = user.nickname,
+                    profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
+                    value = value,
+                )
+            }
+
+        return LeaderboardPagedSectionResponse(
+            items = items,
+            pageInfo =
+                PageInfo(
+                    page = page.number,
+                    size = page.size,
+                    totalElements = page.totalElements,
+                    totalPages = page.totalPages,
+                    hasNext = page.hasNext(),
+                ),
+        )
+    }
+
+    private fun toWeeklySectionResponse(
+        page: Page<com.wafflestudio.team8server.leaderboard.model.WeeklyLeaderboardRecord>,
+        valueSelector: (com.wafflestudio.team8server.leaderboard.model.WeeklyLeaderboardRecord) -> Double?,
+    ): LeaderboardPagedSectionResponse {
+        val usersById = loadUsersById(page.content.map { it.userId })
+
+        val items =
+            page.content.mapNotNull { record ->
+                val value = valueSelector(record) ?: return@mapNotNull null
+                val user = usersById[record.userId] ?: throw ResourceNotFoundException("사용자를 찾을 수 없습니다")
+                LeaderboardEntryResponse(
+                    userId = user.id ?: return@mapNotNull null,
+                    nickname = user.nickname,
+                    profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
+                    value = value,
+                )
+            }
+
+        return LeaderboardPagedSectionResponse(
+            items = items,
+            pageInfo =
+                PageInfo(
+                    page = page.number,
+                    size = page.size,
+                    totalElements = page.totalElements,
+                    totalPages = page.totalPages,
+                    hasNext = page.hasNext(),
+                ),
+        )
+    }
+
+    private fun loadUsersById(userIds: List<Long>): Map<Long, User> {
+        if (userIds.isEmpty()) {
+            return emptyMap()
+        }
+
+        val users = userRepository.findAllById(userIds)
+        val map = users.associateBy { it.id ?: 0L }
+
+        for (id in userIds.distinct()) {
+            if (!map.containsKey(id)) {
+                throw ResourceNotFoundException("사용자를 찾을 수 없습니다")
+            }
+        }
+
+        return map
     }
 }
