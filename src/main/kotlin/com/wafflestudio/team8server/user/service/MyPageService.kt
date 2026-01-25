@@ -86,7 +86,7 @@ class MyPageService(
         size: Int,
     ): PracticeSessionListResponse {
         val pageable = PageRequest.of(page, size)
-        val practiceLogs = practiceLogRepository.findByUserIdOrderByPracticeAtDesc(userId, pageable)
+        val practiceLogs = practiceLogRepository.findByUserIdWithAttemptsOrderByPracticeAtDesc(userId, pageable)
 
         val items =
             practiceLogs.content.map { log ->

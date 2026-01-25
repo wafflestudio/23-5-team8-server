@@ -267,10 +267,39 @@ class MyPageControllerTest
             fun `get practice sessions returns session list`() {
                 val token = signupAndGetToken()
 
+                // Course 생성
+                val course =
+                    courseRepository.save(
+                        Course(
+                            year = 2025,
+                            semester = Semester.SPRING,
+                            courseNumber = "TEST001",
+                            lectureNumber = "001",
+                            courseTitle = "테스트 강의",
+                            quota = 100,
+                            instructor = "테스트 교수",
+                        ),
+                    )
+
                 // 연습 세션 생성
                 mockMvc.perform(
                     post("/api/practice/start")
                         .header("Authorization", "Bearer $token"),
+                )
+
+                // 시도 추가
+                mockTimeProvider.setTime(1000030050L)
+                val request =
+                    PracticeAttemptRequest(
+                        courseId = course.id!!,
+                        totalCompetitors = 100,
+                        capacity = 80,
+                    )
+                mockMvc.perform(
+                    post("/api/practice/attempt")
+                        .header("Authorization", "Bearer $token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)),
                 )
 
                 mockMvc.perform(
@@ -288,8 +317,8 @@ class MyPageControllerTest
                     .andExpect(jsonPath("$.items.length()").value(1))
                     .andExpect(jsonPath("$.items[0].id").isNumber)
                     .andExpect(jsonPath("$.items[0].practiceAt").exists())
-                    .andExpect(jsonPath("$.items[0].totalAttempts").value(0))
-                    .andExpect(jsonPath("$.items[0].successCount").value(0))
+                    .andExpect(jsonPath("$.items[0].totalAttempts").value(1))
+                    .andExpect(jsonPath("$.items[0].successCount").value(1))
                     .andExpect(jsonPath("$.pageInfo.totalElements").value(1))
             }
 
@@ -355,12 +384,42 @@ class MyPageControllerTest
             fun `get practice sessions with pagination`() {
                 val token = signupAndGetToken()
 
-                // 3개의 연습 세션 생성
-                repeat(3) {
+                // Course 생성
+                val course =
+                    courseRepository.save(
+                        Course(
+                            year = 2025,
+                            semester = Semester.SPRING,
+                            courseNumber = "TEST001",
+                            lectureNumber = "001",
+                            courseTitle = "테스트 강의",
+                            quota = 100,
+                            instructor = "테스트 교수",
+                        ),
+                    )
+
+                // 3개의 연습 세션 생성 (각 세션마다 시도 하나씩)
+                repeat(3) { i ->
                     mockMvc.perform(
                         post("/api/practice/start")
                             .header("Authorization", "Bearer $token"),
                     )
+
+                    // 각 세션마다 다른 시간으로 설정 (attempt 성공을 위해 시간 전진 필요)
+                    mockTimeProvider.setTime(1000030050L + i * 100000L)
+                    val request =
+                        PracticeAttemptRequest(
+                            courseId = course.id!!,
+                            totalCompetitors = 100,
+                            capacity = 80,
+                        )
+                    mockMvc.perform(
+                        post("/api/practice/attempt")
+                            .header("Authorization", "Bearer $token")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)),
+                    )
+
                     mockMvc.perform(
                         post("/api/practice/end")
                             .header("Authorization", "Bearer $token"),
