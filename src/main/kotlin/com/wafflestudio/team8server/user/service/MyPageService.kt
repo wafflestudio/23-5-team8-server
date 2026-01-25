@@ -190,9 +190,11 @@ class MyPageService(
                 .findById(userId)
                 .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
 
-        // 기존 이미지가 있으면 S3에서 삭제
-        user.profileImageUrl?.let { existingKey ->
-            service.deleteObject(existingKey)
+        // 기존 이미지가 S3 key인 경우만 삭제 (소셜 로그인 URL은 무시)
+        user.profileImageUrl?.let { existing ->
+            if (!existing.startsWith("http://") && !existing.startsWith("https://")) {
+                service.deleteObject(existing)
+            }
         }
 
         // 새 이미지 URL에서 key 추출 후 저장
@@ -208,9 +210,11 @@ class MyPageService(
                 .findById(userId)
                 .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
 
-        // 기존 이미지가 있으면 S3에서 삭제
-        user.profileImageUrl?.let { existingKey ->
-            service.deleteObject(existingKey)
+        // 기존 이미지가 S3 key인 경우만 삭제 (소셜 로그인 URL은 무시)
+        user.profileImageUrl?.let { existing ->
+            if (!existing.startsWith("http://") && !existing.startsWith("https://")) {
+                service.deleteObject(existing)
+            }
         }
 
         user.profileImageUrl = null
