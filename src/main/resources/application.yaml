@@ -40,5 +40,5 @@ practice:
   # 로그정규분포 파라미터 설정
   distribution:
     default:
-      scale: 9.0                        # μ (mu) - 로그정규분포의 scale 파라미터
-      shape: 0.5                         # σ (sigma) - 로그정규분포의 shape 파라미터
+      scale: 7.31322                    # μ (mu) - 로그정규분포의 scale 파라미터
+      shape: 2.2                        # σ (sigma) - 로그정규분포의 shape 파라미터
