@@ -136,7 +136,7 @@ class MyPageService(
             throw UnauthorizedException("다른 사용자의 연습 기록에 접근할 수 없습니다")
         }
 
-        val details = practiceDetailRepository.findByPracticeLogId(practiceLogId)
+        val details = practiceDetailRepository.findByPracticeLogIdOrderByReactionTimeAsc(practiceLogId)
         val successCount = details.count { it.isSuccess }
 
         val attempts =

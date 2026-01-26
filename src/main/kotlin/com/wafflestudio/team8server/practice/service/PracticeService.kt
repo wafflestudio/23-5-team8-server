@@ -201,7 +201,7 @@ class PracticeService(
         // 9. 시간 중복 검증 (이미 성공한 강의들과 비교)
         val enrolledCourses =
             practiceDetailRepository
-                .findByPracticeLogId(practiceLogId)
+                .findByPracticeLogIdOrderByReactionTimeAsc(practiceLogId)
                 .filter { it.isSuccess && it.course != null }
                 .mapNotNull { it.course }
 
@@ -323,7 +323,7 @@ class PracticeService(
         }
 
         // 3. 모든 시도 내역 조회
-        val details = practiceDetailRepository.findByPracticeLogId(practiceLogId)
+        val details = practiceDetailRepository.findByPracticeLogIdOrderByReactionTimeAsc(practiceLogId)
 
         // 4. 성공 횟수 계산
         val successCount = details.count { it.isSuccess }
@@ -367,7 +367,7 @@ class PracticeService(
         // 2. 해당 세션의 성공한 시도들 조회
         val successfulDetails =
             practiceDetailRepository
-                .findByPracticeLogId(practiceLogId)
+                .findByPracticeLogIdOrderByReactionTimeAsc(practiceLogId)
                 .filter { it.isSuccess && it.course != null }
 
         // 3. Course -> CourseDetailResponse 변환
