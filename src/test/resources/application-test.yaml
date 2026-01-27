@@ -14,6 +14,10 @@ jwt:
   secret: test-secret-key-for-testing-at-least-256-bits-long-hs256-algorithm
   expiration-in-ms: 36000000
 
+# 수강신청 기간 설정 (테스트용)
+enrollment-period:
+  type: REGULAR  # REGULAR(재학생) / FRESHMAN(신입생)
+
 # 수강신청 연습 설정 (테스트용)
 practice:
   session:

@@ -5,7 +5,9 @@ import com.wafflestudio.team8server.common.exception.DuplicateCourseNumberInPreE
 import com.wafflestudio.team8server.common.exception.PreEnrollAlreadyExistsException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.common.exception.TimeConflictInPreEnrollException
+import com.wafflestudio.team8server.config.EnrollmentPeriodProperties
 import com.wafflestudio.team8server.course.dto.CourseDetailResponse
+import com.wafflestudio.team8server.course.model.getEffectiveQuota
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.preenroll.dto.PreEnrollCourseResponse
 import com.wafflestudio.team8server.preenroll.model.PreEnroll
@@ -20,6 +22,7 @@ class PreEnrollService(
     private val preEnrollRepository: PreEnrollRepository,
     private val userRepository: UserRepository,
     private val courseRepository: CourseRepository,
+    private val enrollmentPeriodProperties: EnrollmentPeriodProperties,
 ) {
     private val objectMapper: ObjectMapper = ObjectMapper()
 
@@ -30,9 +33,10 @@ class PreEnrollService(
     ): List<PreEnrollCourseResponse> {
         val items = preEnrollRepository.findAllByUserId(userId)
 
+        val periodType = enrollmentPeriodProperties.type
         val filtered =
             if (overQuotaOnly) {
-                items.filter { it.cartCount > it.course.quota }
+                items.filter { it.cartCount > it.course.getEffectiveQuota(periodType) }
             } else {
                 items
             }
@@ -40,8 +44,9 @@ class PreEnrollService(
         return filtered
             .sortedWith(
                 if (overQuotaOnly) {
-                    compareByDescending<PreEnroll> { it.cartCount.toDouble() / it.course.quota.toDouble() }
-                        .thenBy { it.course.courseNumber }
+                    compareByDescending<PreEnroll> {
+                        it.cartCount.toDouble() / it.course.getEffectiveQuota(periodType).toDouble()
+                    }.thenBy { it.course.courseNumber }
                         .thenBy { it.course.lectureNumber }
                 } else {
                     compareBy({ it.course.courseNumber }, { it.course.lectureNumber })

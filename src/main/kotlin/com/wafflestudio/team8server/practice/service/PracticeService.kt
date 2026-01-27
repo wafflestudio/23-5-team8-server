@@ -7,7 +7,9 @@ import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
 import com.wafflestudio.team8server.common.extension.ensureNotNull
 import com.wafflestudio.team8server.common.time.TimeProvider
+import com.wafflestudio.team8server.config.EnrollmentPeriodProperties
 import com.wafflestudio.team8server.course.dto.CourseDetailResponse
+import com.wafflestudio.team8server.course.model.getEffectiveQuota
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.leaderboard.service.LeaderboardService
 import com.wafflestudio.team8server.practice.config.PracticeDistributionConfig
@@ -24,6 +26,7 @@ import com.wafflestudio.team8server.practice.model.PracticeLog
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
 import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
 import com.wafflestudio.team8server.practice.util.LogNormalDistributionUtil
+import com.wafflestudio.team8server.preenroll.repository.PreEnrollRepository
 import com.wafflestudio.team8server.preenroll.util.CourseScheduleUtil
 import com.wafflestudio.team8server.user.repository.UserRepository
 import org.springframework.data.repository.findByIdOrNull
@@ -36,9 +39,11 @@ class PracticeService(
     private val practiceDetailRepository: PracticeDetailRepository,
     private val userRepository: UserRepository,
     private val courseRepository: CourseRepository,
+    private val preEnrollRepository: PreEnrollRepository,
     private val practiceSessionService: PracticeSessionService,
     private val sessionConfig: PracticeSessionConfig,
     private val distributionConfig: PracticeDistributionConfig,
+    private val enrollmentPeriodProperties: EnrollmentPeriodProperties,
     private val timeProvider: TimeProvider,
     private val leaderboardService: LeaderboardService,
 ) {
@@ -181,6 +186,15 @@ class PracticeService(
             courseRepository.findByIdOrNull(request.courseId)
                 ?: throw ResourceNotFoundException("강의를 찾을 수 없습니다 (ID: ${request.courseId})")
 
+        // 7-1. PreEnroll에서 totalCompetitors(cartCount) 조회
+        val preEnroll =
+            preEnrollRepository.findByUserIdAndCourseId(userId, request.courseId)
+                ?: throw ResourceNotFoundException("장바구니에 해당 강의가 없습니다")
+        val totalCompetitors = preEnroll.cartCount
+
+        // 7-2. 수강신청 기간 타입에 따른 유효 정원(capacity) 계산
+        val capacity = course.getEffectiveQuota(enrollmentPeriodProperties.type)
+
         // 8. 중복 시도 체크 (log_id, course_id)
         val existingDetail = practiceDetailRepository.findByPracticeLogIdAndCourseId(practiceLogId, request.courseId)
         if (existingDetail != null) {
@@ -235,10 +249,10 @@ class PracticeService(
         val percentile = distributionUtil.calculatePercentile(userLatencyMs)
 
         // 13. 등수(Rank) 산출
-        val rank = distributionUtil.calculateRank(percentile, request.totalCompetitors)
+        val rank = distributionUtil.calculateRank(percentile, totalCompetitors)
 
         // 14. 성공 여부 판정
-        val isSuccess = distributionUtil.isSuccessful(rank, request.capacity)
+        val isSuccess = distributionUtil.isSuccessful(rank, capacity)
 
         // 15. PracticeDetail 저장 (통계 정보 포함, Course 정보 복사)
         val practiceDetail =
@@ -251,8 +265,8 @@ class PracticeService(
                 reactionTime = userLatencyMs,
                 rank = rank,
                 percentile = percentile,
-                capacity = request.capacity,
-                totalCompetitors = request.totalCompetitors,
+                capacity = capacity,
+                totalCompetitors = totalCompetitors,
                 distributionScale = distributionParams.scale,
                 distributionShape = distributionParams.shape,
             )

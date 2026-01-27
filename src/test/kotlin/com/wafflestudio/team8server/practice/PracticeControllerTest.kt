@@ -13,6 +13,9 @@ import com.wafflestudio.team8server.practice.dto.VirtualStartTimeOption
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
 import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
 import com.wafflestudio.team8server.practice.service.PracticeSessionService
+import com.wafflestudio.team8server.preenroll.dto.PreEnrollAddRequest
+import com.wafflestudio.team8server.preenroll.dto.PreEnrollUpdateCartCountRequest
+import com.wafflestudio.team8server.preenroll.repository.PreEnrollRepository
 import com.wafflestudio.team8server.user.dto.SignupRequest
 import com.wafflestudio.team8server.user.repository.LocalCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
@@ -34,6 +37,7 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultHandler
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -60,6 +64,7 @@ class PracticeControllerTest
         private val practiceLogRepository: PracticeLogRepository,
         private val practiceDetailRepository: PracticeDetailRepository,
         private val courseRepository: CourseRepository,
+        private val preEnrollRepository: PreEnrollRepository,
         private val practiceSessionService: PracticeSessionService,
         private val leaderboardRecordRepository: LeaderboardRecordRepository,
         private val mockTimeProvider: MockTimeProvider,
@@ -109,6 +114,7 @@ class PracticeControllerTest
             // DB 및 세션 초기화
             practiceDetailRepository.deleteAll()
             practiceLogRepository.deleteAll()
+            preEnrollRepository.deleteAll()
             localCredentialRepository.deleteAll()
             userRepository.deleteAll()
             courseRepository.deleteAll()
@@ -153,6 +159,31 @@ class PracticeControllerTest
 
             val responseBody = response.response.contentAsString
             return objectMapper.readTree(responseBody).get("accessToken").asText()
+        }
+
+        /**
+         * 장바구니에 강의를 추가하고 cartCount를 설정합니다.
+         */
+        private fun addToCart(
+            token: String,
+            course: Course,
+            cartCount: Int,
+        ) {
+            // 장바구니에 추가
+            mockMvc.perform(
+                post("/api/pre-enrolls")
+                    .header("Authorization", "Bearer $token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(PreEnrollAddRequest(courseId = course.id!!))),
+            )
+
+            // cartCount 설정
+            mockMvc.perform(
+                patch("/api/pre-enrolls/${course.id}/cart-count")
+                    .header("Authorization", "Bearer $token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(PreEnrollUpdateCartCountRequest(cartCount = cartCount))),
+            )
         }
 
         // ==================== 세션 시작 테스트 ====================
@@ -432,6 +463,9 @@ class PracticeControllerTest
         fun `attempt practice successfully within capacity`() {
             val token = signupAndGetToken()
 
+            // 장바구니에 강의 추가 (cartCount = 100)
+            addToCart(token, savedCourse, 100)
+
             mockMvc
                 .perform(
                     post("/api/practice/start")
@@ -443,8 +477,6 @@ class PracticeControllerTest
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    totalCompetitors = 100,
-                    capacity = 80,
                 )
 
             mockMvc
@@ -465,6 +497,24 @@ class PracticeControllerTest
         fun `attempt practice fails when exceeds capacity`() {
             val token = signupAndGetToken()
 
+            // 재학생 정원이 작은 강의 생성 (quota=100, freshmanQuota=90 → effectiveQuota=10)
+            val limitedCourse =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "LIMITED001",
+                        lectureNumber = "001",
+                        courseTitle = "정원 제한 강의",
+                        quota = 100,
+                        freshmanQuota = 90,
+                        instructor = "테스트 교수",
+                    ),
+                )
+
+            // 장바구니에 강의 추가 (cartCount = 100, effectiveQuota = 10)
+            addToCart(token, limitedCourse, 100)
+
             mockMvc
                 .perform(
                     post("/api/practice/start")
@@ -475,9 +525,7 @@ class PracticeControllerTest
 
             val request =
                 PracticeAttemptRequest(
-                    courseId = savedCourse.id!!,
-                    totalCompetitors = 100,
-                    capacity = 10,
+                    courseId = limitedCourse.id!!,
                 )
 
             mockMvc
@@ -512,6 +560,10 @@ class PracticeControllerTest
                     ),
                 )
 
+            // 장바구니에 강의 추가
+            addToCart(token, savedCourse, 100)
+            addToCart(token, savedCourse2, 100)
+
             // 세션 시작
             mockMvc
                 .perform(
@@ -524,8 +576,6 @@ class PracticeControllerTest
             val request1 =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    totalCompetitors = 100,
-                    capacity = 40,
                 )
 
             mockMvc
@@ -541,8 +591,6 @@ class PracticeControllerTest
             val request2 =
                 PracticeAttemptRequest(
                     courseId = savedCourse2.id!!,
-                    totalCompetitors = 100,
-                    capacity = 40,
                 )
 
             mockMvc
@@ -571,6 +619,9 @@ class PracticeControllerTest
         fun `duplicate attempt returns already enrolled message when first attempt succeeded`() {
             val token = signupAndGetToken()
 
+            // 장바구니에 강의 추가
+            addToCart(token, savedCourse, 100)
+
             // 세션 시작
             mockMvc
                 .perform(
@@ -583,8 +634,6 @@ class PracticeControllerTest
             val request1 =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    totalCompetitors = 100,
-                    capacity = 40,
                 )
 
             mockMvc
@@ -604,8 +653,6 @@ class PracticeControllerTest
             val request2 =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    totalCompetitors = 100,
-                    capacity = 40,
                 )
 
             mockMvc
@@ -636,6 +683,24 @@ class PracticeControllerTest
         fun `duplicate attempt returns capacity exceeded message when first attempt failed`() {
             val token = signupAndGetToken()
 
+            // 재학생 정원이 작은 강의 생성 (quota=100, freshmanQuota=60 → effectiveQuota=40)
+            val limitedCourse =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "LIMITED002",
+                        lectureNumber = "001",
+                        courseTitle = "정원 제한 강의2",
+                        quota = 100,
+                        freshmanQuota = 60,
+                        instructor = "테스트 교수",
+                    ),
+                )
+
+            // 장바구니에 강의 추가 (cartCount = 100, effectiveQuota = 40)
+            addToCart(token, limitedCourse, 100)
+
             // 세션 시작
             mockMvc
                 .perform(
@@ -643,13 +708,11 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token"),
                 ).andDo(failOn5xx())
 
-            // 첫 번째 시도
+            // 첫 번째 시도 (늦은 반응으로 실패)
             mockTimeProvider.setTime(1000035000L)
             val request1 =
                 PracticeAttemptRequest(
-                    courseId = savedCourse.id!!,
-                    totalCompetitors = 100,
-                    capacity = 40,
+                    courseId = limitedCourse.id!!,
                 )
 
             mockMvc
@@ -668,9 +731,7 @@ class PracticeControllerTest
             mockTimeProvider.setTime(1000035050L)
             val request2 =
                 PracticeAttemptRequest(
-                    courseId = savedCourse.id!!,
-                    totalCompetitors = 100,
-                    capacity = 40,
+                    courseId = limitedCourse.id!!,
                 )
 
             mockMvc
@@ -697,9 +758,11 @@ class PracticeControllerTest
         }
 
         @Test
-        @DisplayName("유효성 검증 실패 - totalCompetitors가 0 이하")
-        fun `attempt practice with invalid totalCompetitors returns 400`() {
+        @DisplayName("장바구니에 없는 강의 시도 시 404 반환")
+        fun `attempt practice with course not in cart returns 404`() {
             val token = signupAndGetToken()
+
+            // 장바구니에 강의를 추가하지 않음
 
             // 세션 시작
             mockMvc
@@ -708,11 +771,11 @@ class PracticeControllerTest
                         .header("Authorization", "Bearer $token"),
                 ).andDo(failOn5xx())
 
+            mockTimeProvider.setTime(1000030050L)
+
             val request =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    totalCompetitors = 0, // 유효하지 않은 값
-                    capacity = 40,
                 )
 
             mockMvc
@@ -722,10 +785,9 @@ class PracticeControllerTest
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)),
                 ).andDo(print())
-                .andDo(failOn5xx())
-                .andExpect(status().isBadRequest) // 400
-                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.validationErrors.totalCompetitors").exists())
+                .andExpect(status().isNotFound) // 404
+                .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("장바구니에 해당 강의가 없습니다"))
         }
 
         // ==================== 성공한 강의 목록 조회 테스트 ====================
@@ -750,6 +812,10 @@ class PracticeControllerTest
                     ),
                 )
 
+            // 장바구니에 강의 추가
+            addToCart(token, savedCourse, 100)
+            addToCart(token, course2, 100)
+
             // 세션 시작
             mockMvc.perform(
                 post("/api/practice/start")
@@ -761,8 +827,6 @@ class PracticeControllerTest
             val request1 =
                 PracticeAttemptRequest(
                     courseId = savedCourse.id!!,
-                    totalCompetitors = 100,
-                    capacity = 80,
                 )
             mockMvc.perform(
                 post("/api/practice/attempt")
@@ -776,8 +840,6 @@ class PracticeControllerTest
             val request2 =
                 PracticeAttemptRequest(
                     courseId = course2.id!!,
-                    totalCompetitors = 100,
-                    capacity = 80,
                 )
             mockMvc.perform(
                 post("/api/practice/attempt")
@@ -823,19 +885,35 @@ class PracticeControllerTest
         fun `get enrolled courses with no successful attempts returns empty list`() {
             val token = signupAndGetToken()
 
+            // 재학생 정원이 작은 강의 생성 (quota=100, freshmanQuota=90 → effectiveQuota=10)
+            val limitedCourse =
+                courseRepository.save(
+                    Course(
+                        year = 2025,
+                        semester = Semester.SPRING,
+                        courseNumber = "LIMITED003",
+                        lectureNumber = "001",
+                        courseTitle = "정원 제한 강의3",
+                        quota = 100,
+                        freshmanQuota = 90,
+                        instructor = "테스트 교수",
+                    ),
+                )
+
+            // 장바구니에 강의 추가
+            addToCart(token, limitedCourse, 100)
+
             // 세션 시작
             mockMvc.perform(
                 post("/api/practice/start")
                     .header("Authorization", "Bearer $token"),
             )
 
-            // 강의 시도 - 실패 (느린 반응)
+            // 강의 시도 - 실패 (느린 반응, effectiveQuota=10)
             mockTimeProvider.setTime(1000035000L)
             val request =
                 PracticeAttemptRequest(
-                    courseId = savedCourse.id!!,
-                    totalCompetitors = 100,
-                    capacity = 10,
+                    courseId = limitedCourse.id!!,
                 )
             mockMvc.perform(
                 post("/api/practice/attempt")
@@ -871,85 +949,8 @@ class PracticeControllerTest
         // ==================== 시간 중복 검증 테스트 ====================
 
         @Test
-        @DisplayName("시간이 겹치는 강의 시도 시 실패")
-        fun `attempt practice with time conflict returns failure`() {
-            val token = signupAndGetToken()
-
-            // 시간 정보가 있는 강의 생성 (월요일 10:00~11:50)
-            val course1 =
-                courseRepository.save(
-                    Course(
-                        year = 2025,
-                        semester = Semester.SPRING,
-                        courseNumber = "TIME001",
-                        lectureNumber = "001",
-                        courseTitle = "월요일 오전 강의",
-                        quota = 100,
-                        instructor = "박교수",
-                        placeAndTime = """{"time": "월(10:00~11:50)"}""",
-                    ),
-                )
-
-            // 시간이 겹치는 강의 생성 (월요일 11:00~12:50)
-            val course2 =
-                courseRepository.save(
-                    Course(
-                        year = 2025,
-                        semester = Semester.SPRING,
-                        courseNumber = "TIME002",
-                        lectureNumber = "001",
-                        courseTitle = "월요일 오전 겹치는 강의",
-                        quota = 100,
-                        instructor = "이교수",
-                        placeAndTime = """{"time": "월(11:00~12:50)"}""",
-                    ),
-                )
-
-            // 세션 시작
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
-
-            // 첫 번째 강의 시도 - 성공
-            mockTimeProvider.setTime(1000030050L)
-            val request1 =
-                PracticeAttemptRequest(
-                    courseId = course1.id!!,
-                    totalCompetitors = 100,
-                    capacity = 80,
-                )
-            mockMvc
-                .perform(
-                    post("/api/practice/attempt")
-                        .header("Authorization", "Bearer $token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request1)),
-                ).andExpect(status().isOk)
-                .andExpect(jsonPath("$.isSuccess").value(true))
-
-            // 두 번째 강의 시도 - 시간 중복으로 실패
-            mockTimeProvider.setTime(1000030100L)
-            val request2 =
-                PracticeAttemptRequest(
-                    courseId = course2.id!!,
-                    totalCompetitors = 100,
-                    capacity = 80,
-                )
-            mockMvc
-                .perform(
-                    post("/api/practice/attempt")
-                        .header("Authorization", "Bearer $token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request2)),
-                ).andExpect(status().isOk)
-                .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.message").value("시간이 겹치는 강의는 수강신청할 수 없습니다"))
-        }
-
-        @Test
-        @DisplayName("시간이 겹치지 않는 강의는 정상 수강신청")
-        fun `attempt practice without time conflict succeeds`() {
+        @DisplayName("여러 과목 수강신청 가능")
+        fun `attempt practices`() {
             val token = signupAndGetToken()
 
             // 시간 정보가 있는 강의 생성 (월요일 10:00~11:50)
@@ -982,6 +983,10 @@ class PracticeControllerTest
                     ),
                 )
 
+            // 장바구니에 강의 추가
+            addToCart(token, course1, 100)
+            addToCart(token, course2, 100)
+
             // 세션 시작
             mockMvc.perform(
                 post("/api/practice/start")
@@ -993,8 +998,6 @@ class PracticeControllerTest
             val request1 =
                 PracticeAttemptRequest(
                     courseId = course1.id!!,
-                    totalCompetitors = 100,
-                    capacity = 80,
                 )
             mockMvc
                 .perform(
@@ -1010,86 +1013,6 @@ class PracticeControllerTest
             val request2 =
                 PracticeAttemptRequest(
                     courseId = course2.id!!,
-                    totalCompetitors = 100,
-                    capacity = 80,
-                )
-            mockMvc
-                .perform(
-                    post("/api/practice/attempt")
-                        .header("Authorization", "Bearer $token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request2)),
-                ).andExpect(status().isOk)
-                .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.message").value("수강신청에 성공했습니다"))
-        }
-
-        @Test
-        @DisplayName("실패한 강의와는 시간 중복 검증하지 않음")
-        fun `time conflict check does not apply to failed courses`() {
-            val token = signupAndGetToken()
-
-            // 시간 정보가 있는 강의 생성 (월요일 10:00~11:50)
-            val course1 =
-                courseRepository.save(
-                    Course(
-                        year = 2025,
-                        semester = Semester.SPRING,
-                        courseNumber = "TIME005",
-                        lectureNumber = "001",
-                        courseTitle = "월요일 오전 강의 (실패용)",
-                        quota = 100,
-                        instructor = "박교수",
-                        placeAndTime = """{"time": "월(10:00~11:50)"}""",
-                    ),
-                )
-
-            // 시간이 겹치는 강의 생성 (월요일 11:00~12:50)
-            val course2 =
-                courseRepository.save(
-                    Course(
-                        year = 2025,
-                        semester = Semester.SPRING,
-                        courseNumber = "TIME006",
-                        lectureNumber = "001",
-                        courseTitle = "월요일 오전 겹치는 강의",
-                        quota = 100,
-                        instructor = "이교수",
-                        placeAndTime = """{"time": "월(11:00~12:50)"}""",
-                    ),
-                )
-
-            // 세션 시작
-            mockMvc.perform(
-                post("/api/practice/start")
-                    .header("Authorization", "Bearer $token"),
-            )
-
-            // 첫 번째 강의 시도 - 실패 (느린 반응, 정원 초과)
-            mockTimeProvider.setTime(1000035000L)
-            val request1 =
-                PracticeAttemptRequest(
-                    courseId = course1.id!!,
-                    totalCompetitors = 100,
-                    capacity = 10,
-                )
-            mockMvc
-                .perform(
-                    post("/api/practice/attempt")
-                        .header("Authorization", "Bearer $token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request1)),
-                ).andExpect(status().isOk)
-                .andExpect(jsonPath("$.isSuccess").value(false))
-                .andExpect(jsonPath("$.message").value("정원이 초과되었습니다"))
-
-            // 두 번째 강의 시도 - 첫 번째가 실패했으므로 시간 중복 검증 안 함, 성공 가능
-            mockTimeProvider.setTime(1000030050L)
-            val request2 =
-                PracticeAttemptRequest(
-                    courseId = course2.id!!,
-                    totalCompetitors = 100,
-                    capacity = 80,
                 )
             mockMvc
                 .perform(

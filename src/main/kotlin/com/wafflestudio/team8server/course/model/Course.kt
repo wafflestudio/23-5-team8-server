@@ -1,5 +1,6 @@
 package com.wafflestudio.team8server.course.model
 
+import com.wafflestudio.team8server.config.EnrollmentPeriodType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -45,7 +46,7 @@ class Course(
     @Column(name = "quota", nullable = false)
     val quota: Int,
     @Column(name = "freshman_quota")
-    val freshmanQuota: Int? = null,
+    val freshmanQuota: Int? = 0,
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
@@ -57,3 +58,19 @@ enum class Semester {
     FALL,
     WINTER,
 }
+
+/**
+ * 수강신청 기간 타입에 따른 유효 정원을 계산합니다.
+ *
+ * - REGULAR(재학생): quota - freshmanQuota
+ * - FRESHMAN(신입생): quota - enrolledCount (추후 지원 예정, 현재는 quota 반환)
+ */
+fun Course.getEffectiveQuota(periodType: EnrollmentPeriodType): Int =
+    when (periodType) {
+        EnrollmentPeriodType.REGULAR -> quota - (freshmanQuota ?: 0)
+        EnrollmentPeriodType.FRESHMAN -> {
+            // TODO: enrolledCount 컬럼 추가 후 구현
+            // quota - enrolledCount
+            quota
+        }
+    }
