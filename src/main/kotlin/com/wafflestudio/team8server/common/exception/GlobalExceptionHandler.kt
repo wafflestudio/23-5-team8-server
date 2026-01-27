@@ -3,6 +3,10 @@ package com.wafflestudio.team8server.common.exception
 import com.wafflestudio.team8server.course.service.CourseExcelParser
 import io.swagger.v3.oas.annotations.media.Schema
 import org.slf4j.LoggerFactory
+import org.springframework.dao.CannotAcquireLockException
+import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.dao.DeadlockLoserDataAccessException
+import org.springframework.dao.QueryTimeoutException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -193,5 +197,53 @@ class GlobalExceptionHandler {
                 errorCode = e.errorCode,
             )
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response)
+    }
+
+    @ExceptionHandler(
+        DeadlockLoserDataAccessException::class,
+        CannotAcquireLockException::class,
+    )
+    fun handleDbLockException(e: Exception): ResponseEntity<ErrorResponse> {
+        val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+        log.error("DB_LOCK_ERROR", e)
+
+        val response =
+            ErrorResponse(
+                status = HttpStatus.SERVICE_UNAVAILABLE.value(), // 503
+                error = "Service Unavailable",
+                message = "DB 처리 중 락 경합이 발생했습니다. 잠시 후 다시 시도해주세요.",
+                errorCode = "DB_LOCK_ERROR",
+            )
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response)
+    }
+
+    @ExceptionHandler(QueryTimeoutException::class)
+    fun handleQueryTimeoutException(e: QueryTimeoutException): ResponseEntity<ErrorResponse> {
+        val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+        log.error("DB_TIMEOUT", e)
+
+        val response =
+            ErrorResponse(
+                status = HttpStatus.GATEWAY_TIMEOUT.value(), // 504
+                error = "Gateway Timeout",
+                message = "DB 처리 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.",
+                errorCode = "DB_TIMEOUT",
+            )
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(response)
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException::class)
+    fun handleDataIntegrityViolationException(e: DataIntegrityViolationException): ResponseEntity<ErrorResponse> {
+        val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+        log.error("DB_CONSTRAINT_VIOLATION", e)
+
+        val response =
+            ErrorResponse(
+                status = HttpStatus.CONFLICT.value(), // 409
+                error = "Conflict",
+                message = "DB 제약조건 위반으로 강의 적재에 실패했습니다.",
+                errorCode = "DB_CONSTRAINT_VIOLATION",
+            )
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response)
     }
 }
