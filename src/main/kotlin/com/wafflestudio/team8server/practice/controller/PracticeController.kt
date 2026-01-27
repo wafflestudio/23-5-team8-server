@@ -282,16 +282,18 @@ class PracticeController(
                - 1초 이내 Early Click만 PracticeLog에 earlyClickDiff 기록
                - 1초 초과 Early Click은 응답만 반환 (DB 기록 안 함)
             4. Course 조회: 강의가 존재하는지 확인
-            5. 중복 시도 체크: 같은 세션에서 같은 강의를 이미 시도했는지 확인
-            6. 로그정규분포 기반 백분위 계산: CDF를 사용하여 사용자 지연 시간의 백분위 계산
-            7. 등수 산출: percentile × totalCompetitors
-            8. 성공 여부 판정: rank <= capacity
-            9. PracticeDetail 저장: 시도 결과와 통계 정보를 DB에 저장
+            5. PreEnroll 조회: 장바구니에서 totalCompetitors(cartCount) 조회
+            6. 유효 정원 계산: 수강신청 기간에 따른 effectiveQuota 계산
+            7. 중복 시도 체크: 같은 세션에서 같은 강의를 이미 시도했는지 확인
+            8. 로그정규분포 기반 백분위 계산: CDF를 사용하여 사용자 지연 시간의 백분위 계산
+            9. 등수 산출: percentile × totalCompetitors
+            10. 성공 여부 판정: rank <= capacity
+            11. PracticeDetail 저장: 시도 결과와 통계 정보를 DB에 저장
 
             **Request 파라미터:**
             - courseId: 수강신청할 강의 ID
-            - totalCompetitors: 전체 경쟁자 수 (장바구니에 담은 인원 수)
-            - capacity: 수강 정원
+            - totalCompetitors: (Deprecated) 서버에서 PreEnroll.cartCount로 조회
+            - capacity: (Deprecated) 서버에서 Course.effectiveQuota로 계산
 
             **Response:**
             - isSuccess: 수강신청 성공 여부
@@ -409,8 +411,7 @@ class PracticeController(
                                       "message": "입력 값이 유효하지 않습니다",
                                       "errorCode": "VALIDATION_FAILED",
                                       "validationErrors": {
-                                        "totalCompetitors": "전체 경쟁자 수는 1 이상이어야 합니다",
-                                        "capacity": "수강 정원은 1 이상이어야 합니다"
+                                        "courseId": "강의 ID는 필수입니다"
                                       }
                                     }
                                     """,
@@ -447,7 +448,7 @@ class PracticeController(
             ),
             ApiResponse(
                 responseCode = "404",
-                description = "강의를 찾을 수 없음",
+                description = "강의 또는 장바구니 항목을 찾을 수 없음",
                 content = [
                     Content(
                         schema = Schema(implementation = ErrorResponse::class),
@@ -462,6 +463,21 @@ class PracticeController(
                                       "status": 404,
                                       "error": "Not Found",
                                       "message": "강의를 찾을 수 없습니다 (ID: 999)",
+                                      "errorCode": "RESOURCE_NOT_FOUND",
+                                      "validationErrors": null
+                                    }
+                                    """,
+                            ),
+                            ExampleObject(
+                                name = "pre-enroll-not-found",
+                                summary = "장바구니에 해당 강의 없음",
+                                value =
+                                    """
+                                    {
+                                      "timestamp": "2026-01-15T12:00:00",
+                                      "status": 404,
+                                      "error": "Not Found",
+                                      "message": "장바구니에 해당 강의가 없습니다",
                                       "errorCode": "RESOURCE_NOT_FOUND",
                                       "validationErrors": null
                                     }

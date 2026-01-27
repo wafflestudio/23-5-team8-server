@@ -14,6 +14,10 @@ spring:
       max-file-size: 20MB
       max-request-size: 20MB
 
+# 수강신청 기간 설정
+enrollment-period:
+  type: REGULAR  # REGULAR(재학생) / FRESHMAN(신입생)
+
 oauth:
   kakao:
     client-id: ${KAKAO_CLIENT_ID:}

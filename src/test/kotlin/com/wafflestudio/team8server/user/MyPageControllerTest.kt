@@ -9,6 +9,9 @@ import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
 import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
+import com.wafflestudio.team8server.preenroll.dto.PreEnrollAddRequest
+import com.wafflestudio.team8server.preenroll.dto.PreEnrollUpdateCartCountRequest
+import com.wafflestudio.team8server.preenroll.repository.PreEnrollRepository
 import com.wafflestudio.team8server.user.dto.ChangePasswordRequest
 import com.wafflestudio.team8server.user.dto.LoginRequest
 import com.wafflestudio.team8server.user.dto.SignupRequest
@@ -57,6 +60,7 @@ class MyPageControllerTest
         private val practiceLogRepository: PracticeLogRepository,
         private val practiceDetailRepository: PracticeDetailRepository,
         private val courseRepository: CourseRepository,
+        private val preEnrollRepository: PreEnrollRepository,
         private val mockTimeProvider: MockTimeProvider,
     ) {
         private lateinit var mockMvc: MockMvc
@@ -72,11 +76,37 @@ class MyPageControllerTest
 
             practiceDetailRepository.deleteAll()
             practiceLogRepository.deleteAll()
+            preEnrollRepository.deleteAll()
             localCredentialRepository.deleteAll()
             userRepository.deleteAll()
             courseRepository.deleteAll()
 
             mockTimeProvider.setTime(1000000000L)
+        }
+
+        /**
+         * 장바구니에 강의를 추가하고 cartCount를 설정합니다.
+         */
+        private fun addToCart(
+            token: String,
+            course: Course,
+            cartCount: Int,
+        ) {
+            // 장바구니에 추가
+            mockMvc.perform(
+                post("/api/pre-enrolls")
+                    .header("Authorization", "Bearer $token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(PreEnrollAddRequest(courseId = course.id!!))),
+            )
+
+            // cartCount 설정
+            mockMvc.perform(
+                patch("/api/pre-enrolls/${course.id}/cart-count")
+                    .header("Authorization", "Bearer $token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(PreEnrollUpdateCartCountRequest(cartCount = cartCount))),
+            )
         }
 
         private fun signupAndGetToken(
@@ -281,6 +311,9 @@ class MyPageControllerTest
                         ),
                     )
 
+                // 장바구니에 강의 추가
+                addToCart(token, course, 100)
+
                 // 연습 세션 생성
                 mockMvc.perform(
                     post("/api/practice/start")
@@ -292,8 +325,6 @@ class MyPageControllerTest
                 val request =
                     PracticeAttemptRequest(
                         courseId = course.id!!,
-                        totalCompetitors = 100,
-                        capacity = 80,
                     )
                 mockMvc.perform(
                     post("/api/practice/attempt")
@@ -341,6 +372,9 @@ class MyPageControllerTest
                         ),
                     )
 
+                // 장바구니에 강의 추가
+                addToCart(token, course, 100)
+
                 // 세션 시작
                 mockMvc.perform(
                     post("/api/practice/start")
@@ -352,8 +386,6 @@ class MyPageControllerTest
                 val request =
                     PracticeAttemptRequest(
                         courseId = course.id!!,
-                        totalCompetitors = 100,
-                        capacity = 80,
                     )
 
                 mockMvc.perform(
@@ -398,6 +430,9 @@ class MyPageControllerTest
                         ),
                     )
 
+                // 장바구니에 강의 추가
+                addToCart(token, course, 100)
+
                 // 3개의 연습 세션 생성 (각 세션마다 시도 하나씩)
                 repeat(3) { i ->
                     mockMvc.perform(
@@ -410,8 +445,6 @@ class MyPageControllerTest
                     val request =
                         PracticeAttemptRequest(
                             courseId = course.id!!,
-                            totalCompetitors = 100,
-                            capacity = 80,
                         )
                     mockMvc.perform(
                         post("/api/practice/attempt")
@@ -487,6 +520,9 @@ class MyPageControllerTest
                         ),
                     )
 
+                // 장바구니에 강의 추가
+                addToCart(token, course, 100)
+
                 // 세션 시작
                 val startResponse =
                     mockMvc
@@ -506,8 +542,6 @@ class MyPageControllerTest
                 val request =
                     PracticeAttemptRequest(
                         courseId = course.id!!,
-                        totalCompetitors = 100,
-                        capacity = 80,
                     )
 
                 mockMvc.perform(
