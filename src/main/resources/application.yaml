@@ -42,3 +42,7 @@ practice:
     default:
       scale: 7.31322                    # μ (mu) - 로그정규분포의 scale 파라미터
       shape: 2.2                        # σ (sigma) - 로그정규분포의 shape 파라미터
+
+course:
+  import:
+    batch-size: 500

@@ -56,10 +56,21 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.apache.poi:poi:5.2.5")
     implementation("org.apache.poi:poi-ooxml:5.2.5")
+    implementation("com.github.pjfanning:excel-streaming-reader:4.2.1")
 
     // AWS SDK v2 for S3
     implementation(platform("software.amazon.awssdk:bom:2.25.0"))
     implementation("software.amazon.awssdk:s3")
+}
+
+configurations.all {
+    resolutionStrategy {
+        force(
+            "org.apache.poi:poi:5.2.5",
+            "org.apache.poi:poi-ooxml:5.2.5",
+            "org.apache.poi:poi-ooxml-lite:5.2.5",
+        )
+    }
 }
 
 kotlin {

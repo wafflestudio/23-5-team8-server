@@ -4,11 +4,13 @@ import com.wafflestudio.team8server.common.dto.PageInfo
 import com.wafflestudio.team8server.course.dto.CourseDetailResponse
 import com.wafflestudio.team8server.course.dto.CourseSearchRequest
 import com.wafflestudio.team8server.course.dto.CourseSearchResponse
+import com.wafflestudio.team8server.course.model.Course
 import com.wafflestudio.team8server.course.model.Semester
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.course.repository.CourseSpecification
 import jakarta.persistence.EntityManager
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -21,6 +23,8 @@ class CourseService(
     private val courseRepository: CourseRepository,
     private val courseExcelParser: CourseExcelParser,
     private val entityManager: EntityManager,
+    @Value("\${course.import.batch-size:500}")
+    private val courseImportBatchSize: Int,
 ) {
     private val log = LoggerFactory.getLogger(CourseExcelParser::class.java)
 
@@ -89,45 +93,50 @@ class CourseService(
         val importId = UUID.randomUUID().toString().substring(0, 8)
         val t0 = System.currentTimeMillis()
 
-        val parsed =
-            courseExcelParser.parse(
-                file = file,
-                year = year,
-                semester = semester,
-            )
-        val tParse = System.currentTimeMillis()
-
         val deleted = courseRepository.deleteAllByYearAndSemester(year, semester)
-        val tDelete = System.currentTimeMillis()
-        log.info(
-            "[importId={}] parse={}ms delete={}ms deleted={}",
-            importId,
-            (tParse - t0),
-            (tDelete - tParse),
-            deleted,
-        )
+        if (deleted > 0) log.info("[importId={}] Deleted {} courses", importId, deleted)
 
-        if (parsed.isEmpty()) {
-            log.warn("[importId={}] no courses parsed; skip insert", importId)
+        val batchSize = courseImportBatchSize.coerceIn(50, 5000)
+        val buffer = ArrayList<Course>(batchSize)
+        var parsedCount = 0
+
+        val parsedTotal =
+            courseExcelParser.parse(file, year, semester) { course ->
+                buffer.add(course)
+                parsedCount++
+
+                if (buffer.size >= batchSize) {
+                    courseRepository.saveAll(buffer)
+                    courseRepository.flush()
+                    entityManager.clear()
+                    buffer.clear()
+
+                    if (parsedCount % (batchSize * 5) == 0) {
+                        log.info("[importId={}] parsed/inserted={}", importId, parsedCount)
+                    }
+                }
+            }
+
+        if (buffer.isNotEmpty()) {
+            courseRepository.saveAll(buffer)
+            courseRepository.flush()
+            entityManager.clear()
+            buffer.clear()
+        }
+
+        val elapsed = System.currentTimeMillis() - t0
+        if (parsedTotal == 0) {
+            log.warn("[importId={}] No courses parsed from .xlsx (elapsed={}ms)", importId, elapsed)
             return
         }
 
-        val batchSize = 500
-        var inserted = 0
-
-        parsed.chunked(batchSize).forEachIndexed { idx, chunk ->
-            courseRepository.saveAll(chunk)
-            courseRepository.flush()
-            entityManager.clear()
-            inserted += chunk.size
-
-            if ((idx + 1) % 5 == 0) {
-                val now = System.currentTimeMillis()
-                log.info("[importId={}] inserted={} elapsed={}ms", importId, inserted, (now - t0))
-            }
-        }
-
-        val tEnd = System.currentTimeMillis()
-        log.info("[importId={}] DONE total={}ms inserted={}", importId, (tEnd - t0), inserted)
+        log.info(
+            "[importId={}] Imported {} courses for year={}, semester={} (elapsed={}ms)",
+            importId,
+            parsedTotal,
+            year,
+            semester,
+            elapsed,
+        )
     }
 }

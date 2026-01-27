@@ -106,14 +106,6 @@ class CourseController(
         @RequestParam semester: Semester,
         @RequestPart file: MultipartFile,
     ) {
-        log.info(
-            "Import courses requested: year={}, semester={}, filename={}, size={}",
-            year,
-            semester,
-            file.originalFilename,
-            file.size,
-        )
-
         courseService.import(year, semester, file)
     }
 }
