@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.slf4j.LoggerFactory
 import org.springdoc.core.annotations.ParameterObject
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -28,6 +29,8 @@ import org.springframework.web.multipart.MultipartFile
 class CourseController(
     private val courseService: CourseService,
 ) {
+    private val log = LoggerFactory.getLogger(CourseController::class.java)
+
     @Operation(
         summary = "강의 검색",
         description = """
@@ -103,11 +106,14 @@ class CourseController(
         @RequestParam semester: Semester,
         @RequestPart file: MultipartFile,
     ) {
-        try {
-            courseService.import(year, semester, file)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            throw e
-        }
+        log.info(
+            "Import courses requested: year={}, semester={}, filename={}, size={}",
+            year,
+            semester,
+            file.originalFilename,
+            file.size,
+        )
+
+        courseService.import(year, semester, file)
     }
 }
