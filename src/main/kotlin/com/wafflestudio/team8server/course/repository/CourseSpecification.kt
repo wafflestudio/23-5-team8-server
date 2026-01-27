@@ -18,12 +18,45 @@ object CourseSpecification {
             val predicates = mutableListOf<Predicate>()
 
             if (!query.isNullOrBlank()) {
-                val q = "%${query.trim()}%"
-                predicates +=
-                    cb.or(
-                        cb.like(root.get("courseTitle"), q),
-                        cb.like(root.get("instructor"), q),
+                val trimmedQuery = query.trim()
+                val likeQuery = "%$trimmedQuery%"
+
+                val noSpaceQuery = trimmedQuery.replace(" ", "")
+                val likeNoSpaceQuery = "%$noSpaceQuery%"
+
+                val titlePath = root.get<String>("courseTitle")
+                val instructorPath = root.get<String>("instructor")
+
+                val orPredicates =
+                    mutableListOf(
+                        cb.like(titlePath, likeQuery),
+                        cb.like(instructorPath, likeQuery),
                     )
+
+                if (noSpaceQuery.isNotBlank()) {
+                    val courseTitleNoSpace =
+                        cb.function(
+                            "replace",
+                            String::class.java,
+                            titlePath,
+                            cb.literal(" "),
+                            cb.literal(""),
+                        )
+
+                    val instructorNoSpace =
+                        cb.function(
+                            "replace",
+                            String::class.java,
+                            instructorPath,
+                            cb.literal(" "),
+                            cb.literal(""),
+                        )
+
+                    orPredicates += cb.like(courseTitleNoSpace, likeNoSpaceQuery)
+                    orPredicates += cb.like(instructorNoSpace, likeNoSpaceQuery)
+                }
+
+                predicates += cb.or(*orPredicates.toTypedArray())
             }
 
             if (!courseNumber.isNullOrBlank()) {
