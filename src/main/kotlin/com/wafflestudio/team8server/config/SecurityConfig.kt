@@ -44,6 +44,8 @@ class SecurityConfig(
                         "/api/auth/google/login",
                         "/api/courses/search",
                         "/api/courses/import",
+                        "/api/leaderboard",
+                        "/api/leaderboard/weekly",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/swagger-ui.html",
