@@ -93,9 +93,9 @@ class KakaoOAuthClient(
 
             return KakaoUserInfo(
                 id = me.id.toString(),
-                email = me.kakaoAccount?.email,
+                email = null, // me.kakaoAccount?.email,
                 nickname = me.kakaoAccount?.profile?.nickname,
-                profileImageUrl = me.kakaoAccount?.profile?.profileImageUrl,
+                profileImageUrl = null, // me.kakaoAccount?.profile?.profileImageUrl,
             )
         } catch (e: HttpStatusCodeException) {
             throw UnauthorizedException("카카오 사용자 정보를 가져오지 못했습니다")

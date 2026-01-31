@@ -55,7 +55,7 @@ class SocialAuthService(
         val user =
             User(
                 nickname = kakaoUserInfo.nickname ?: NicknameGenerator.generateRandomNickname(),
-                profileImageUrl = kakaoUserInfo.profileImageUrl,
+                profileImageUrl = null, // kakaoUserInfo.profileImageUrl,
             )
         val savedUser = userRepository.save(user)
 
@@ -113,7 +113,7 @@ class SocialAuthService(
         val user =
             User(
                 nickname = googleUserInfo.name ?: NicknameGenerator.generateRandomNickname(),
-                profileImageUrl = googleUserInfo.picture,
+                profileImageUrl = null, // googleUserInfo.picture,
             )
         val savedUser = userRepository.save(user)
 
