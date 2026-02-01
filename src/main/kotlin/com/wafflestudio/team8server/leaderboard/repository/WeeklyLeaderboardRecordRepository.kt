@@ -15,7 +15,7 @@ interface WeeklyLeaderboardRecordRepository : JpaRepository<WeeklyLeaderboardRec
             SELECT rec
             FROM WeeklyLeaderboardRecord rec
             WHERE rec.bestFirstReactionTime IS NOT NULL
-            ORDER BY rec.bestFirstReactionTime ASC
+            ORDER BY rec.bestFirstReactionTime ASC, rec.bestFirstReactionTimeAchievedAt ASC
         """,
     )
     fun findTopByBestFirstReactionTime(pageable: Pageable): Page<WeeklyLeaderboardRecord>
@@ -25,7 +25,7 @@ interface WeeklyLeaderboardRecordRepository : JpaRepository<WeeklyLeaderboardRec
             SELECT rec
             FROM WeeklyLeaderboardRecord rec
             WHERE rec.bestSecondReactionTime IS NOT NULL
-            ORDER BY rec.bestSecondReactionTime ASC
+            ORDER BY rec.bestSecondReactionTime ASC, rec.bestSecondReactionTimeAchievedAt ASC
         """,
     )
     fun findTopByBestSecondReactionTime(pageable: Pageable): Page<WeeklyLeaderboardRecord>
@@ -35,7 +35,7 @@ interface WeeklyLeaderboardRecordRepository : JpaRepository<WeeklyLeaderboardRec
             SELECT rec
             FROM WeeklyLeaderboardRecord rec
             WHERE rec.bestCompetitionRate IS NOT NULL
-            ORDER BY rec.bestCompetitionRate DESC
+            ORDER BY rec.bestCompetitionRate DESC, rec.bestCompetitionRateAchievedAt ASC
         """,
     )
     fun findTopByBestCompetitionRate(pageable: Pageable): Page<WeeklyLeaderboardRecord>

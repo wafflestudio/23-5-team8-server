@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 
 @Service
 class LeaderboardService(
@@ -169,12 +170,14 @@ class LeaderboardService(
             )
 
         var changed = false
+        val now = Instant.now()
 
         if (firstReactionCandidate != null) {
             val prev = record.bestFirstReactionTime
             val shouldUpdate = prev == null || firstReactionCandidate < prev
             if (shouldUpdate) {
                 record.bestFirstReactionTime = firstReactionCandidate
+                record.bestFirstReactionTimeAchievedAt = now
                 changed = true
             }
         }
@@ -184,6 +187,7 @@ class LeaderboardService(
             val shouldUpdate = prev == null || secondReactionCandidate < prev
             if (shouldUpdate) {
                 record.bestSecondReactionTime = secondReactionCandidate
+                record.bestSecondReactionTimeAchievedAt = now
                 changed = true
             }
         }
@@ -193,6 +197,7 @@ class LeaderboardService(
             val shouldUpdate = prev == null || bestCompetitionRateCandidate > prev
             if (shouldUpdate) {
                 record.bestCompetitionRate = bestCompetitionRateCandidate
+                record.bestCompetitionRateAchievedAt = now
                 changed = true
             }
         }
@@ -242,11 +247,13 @@ class LeaderboardService(
                 )
 
         var changed = false
+        val now = Instant.now()
 
         if (firstReactionCandidate != null) {
             val prev = weekly.bestFirstReactionTime
             if (prev == null || firstReactionCandidate < prev) {
                 weekly.bestFirstReactionTime = firstReactionCandidate
+                weekly.bestFirstReactionTimeAchievedAt = now
                 changed = true
             }
         }
@@ -255,6 +262,7 @@ class LeaderboardService(
             val prev = weekly.bestSecondReactionTime
             if (prev == null || secondReactionCandidate < prev) {
                 weekly.bestSecondReactionTime = secondReactionCandidate
+                weekly.bestSecondReactionTimeAchievedAt = now
                 changed = true
             }
         }
@@ -263,6 +271,7 @@ class LeaderboardService(
             val prev = weekly.bestCompetitionRate
             if (prev == null || bestCompetitionRateCandidate > prev) {
                 weekly.bestCompetitionRate = bestCompetitionRateCandidate
+                weekly.bestCompetitionRateAchievedAt = now
                 changed = true
             }
         }
