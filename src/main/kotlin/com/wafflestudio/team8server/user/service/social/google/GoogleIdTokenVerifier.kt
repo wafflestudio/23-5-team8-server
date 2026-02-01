@@ -33,9 +33,9 @@ class GoogleIdTokenVerifier(
 
         return GoogleUserInfo(
             sub = sub,
-            email = jwt.getClaimAsString("email"),
+            email = null, // jwt.getClaimAsString("email"),
             name = jwt.getClaimAsString("name"),
-            picture = jwt.getClaimAsString("picture"),
+            picture = null, // jwt.getClaimAsString("picture"),
         )
     }
 
