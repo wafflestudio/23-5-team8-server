@@ -53,7 +53,7 @@ class AuthService(
             )
         localCredentialRepository.save(credential)
 
-        val accessToken = jwtTokenProvider.createToken(savedUser.id.ensureNotNull())
+        val accessToken = jwtTokenProvider.createToken(savedUser.id.ensureNotNull(), savedUser.role.name)
 
         // 5. 응답 DTO 반환
         return SignupResponse(
@@ -74,7 +74,7 @@ class AuthService(
         }
 
         // 3. JWT 토큰 발급
-        val accessToken = jwtTokenProvider.createToken(credential.user.id.ensureNotNull())
+        val accessToken = jwtTokenProvider.createToken(credential.user.id.ensureNotNull(), credential.user.role.name)
 
         // 4. 응답 반환
         return LoginResponse(

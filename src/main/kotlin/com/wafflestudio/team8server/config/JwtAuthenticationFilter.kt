@@ -6,6 +6,7 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
 import org.springframework.stereotype.Component
@@ -34,15 +35,17 @@ class JwtAuthenticationFilter(
             if (token != null && jwtTokenProvider.validateToken(token)) {
                 // 3. 토큰이 블랙리스트에 있는지 확인 (로그아웃된 토큰인지 체크)
                 if (!tokenBlacklistService.isBlacklisted(token)) {
-                    // 4. 토큰에서 사용자 ID 추출
+                    // 4. 토큰에서 사용자 ID와 권한 추출
                     val userId = jwtTokenProvider.getUserIdFromToken(token)
+                    val role = jwtTokenProvider.getRoleFromToken(token)
+                    val authorities = listOf(SimpleGrantedAuthority("ROLE_$role"))
 
-                    // 5. 인증 객체 생성 (authorities는 비어있음 - 필요시 추가 가능)
+                    // 5. 인증 객체 생성
                     val authentication =
                         UsernamePasswordAuthenticationToken(
                             userId, // principal: 사용자 ID
                             null, // credentials: 비밀번호 (JWT에서는 불필요)
-                            emptyList(), // authorities: 권한 목록 (필요시 추가)
+                            authorities, // authorities: 권한 목록
                         )
 
                     // 6. 요청 정보를 인증 객체에 추가
