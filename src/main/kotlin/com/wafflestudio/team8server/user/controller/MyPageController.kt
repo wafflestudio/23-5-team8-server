@@ -113,7 +113,7 @@ class MyPageController(
                                   "message": "입력 값이 유효하지 않습니다",
                                   "errorCode": "VALIDATION_FAILED",
                                   "validationErrors": {
-                                    "nickname": "닉네임은 2자 이상 6자 이하여야 합니다"
+                                    "nickname": "닉네임은 2자 이상 20자 이하여야 합니다"
                                   }
                                 }
                                 """,
