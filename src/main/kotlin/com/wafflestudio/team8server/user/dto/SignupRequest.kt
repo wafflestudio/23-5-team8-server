@@ -24,7 +24,7 @@ data class SignupRequest(
         required = true,
     )
     val password: String,
-    @field:Size(min = 2, max = 6, message = "닉네임은 2자 이상 6자 이하여야 합니다")
-    @Schema(description = "사용자 닉네임 (2-6자, 미입력 시 랜덤 생성)", example = "홍길동", required = false)
+    @field:Size(min = 2, max = 20, message = "닉네임은 2자 이상 20자 이하여야 합니다")
+    @Schema(description = "사용자 닉네임 (2-20자, 미입력 시 랜덤 생성)", example = "홍길동", required = false)
     val nickname: String? = null,
 )
