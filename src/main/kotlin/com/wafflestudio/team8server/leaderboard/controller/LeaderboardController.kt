@@ -9,6 +9,8 @@ import com.wafflestudio.team8server.leaderboard.dto.LeaderboardPageRequest
 import com.wafflestudio.team8server.leaderboard.dto.LeaderboardPagedSectionResponse
 import com.wafflestudio.team8server.leaderboard.dto.LeaderboardTopPagedResponse
 import com.wafflestudio.team8server.leaderboard.dto.MyLeaderboardResponse
+import com.wafflestudio.team8server.leaderboard.repository.LeaderboardRecordRepository
+import com.wafflestudio.team8server.leaderboard.repository.WeeklyLeaderboardRecordRepository
 import com.wafflestudio.team8server.leaderboard.service.LeaderboardService
 import com.wafflestudio.team8server.user.model.User
 import com.wafflestudio.team8server.user.repository.UserRepository
@@ -35,6 +37,8 @@ class LeaderboardController(
     private val leaderboardService: LeaderboardService,
     private val userRepository: UserRepository,
     private val profileImageUrlResolver: ProfileImageUrlResolver,
+    private val leaderboardRecordRepository: LeaderboardRecordRepository,
+    private val weeklyLeaderboardRecordRepository: WeeklyLeaderboardRecordRepository,
 ) {
     @Operation(
         summary = "리더보드 조회 (페이지네이션 적용)",
@@ -66,7 +70,9 @@ class LeaderboardController(
                                 {
                                   "topFirstReactionTime": {
                                     "items": [
-                                      { "userId": 1, "nickname": "user1", "profileImageUrl": null, "value": 150.0 }
+                                      { "userId": 1, "nickname": "user1", "profileImageUrl": null, "value": 150.0, "rank": 1 },
+                                      { "userId": 2, "nickname": "user2", "profileImageUrl": null, "value": 150.0, "rank": 1 },
+                                      { "userId": 3, "nickname": "user3", "profileImageUrl": null, "value": 160.0, "rank": 3 }
                                     ],
                                     "pageInfo": { "page": 0, "size": 10, "totalElements": 123, "totalPages": 13, "hasNext": true }
                                   },
@@ -76,7 +82,7 @@ class LeaderboardController(
                                   },
                                   "topCompetitionRate": {
                                     "items": [
-                                      { "userId": 3, "nickname": "user3", "profileImageUrl": null, "value": 4.8 }
+                                      { "userId": 3, "nickname": "user3", "profileImageUrl": null, "value": 4.8, "rank": 1 }
                                     ],
                                     "pageInfo": { "page": 0, "size": 10, "totalElements": 55, "totalPages": 6, "hasNext": true }
                                   }
@@ -99,18 +105,21 @@ class LeaderboardController(
             toSectionResponse(
                 page = result.topFirstReactionTime,
                 valueSelector = { it.bestFirstReactionTime?.toDouble() },
+                rankCalculator = { value -> leaderboardRecordRepository.countBetterFirstReactionTime(value.toInt()) + 1 },
             )
 
         val secondSection =
             toSectionResponse(
                 page = result.topSecondReactionTime,
                 valueSelector = { it.bestSecondReactionTime?.toDouble() },
+                rankCalculator = { value -> leaderboardRecordRepository.countBetterSecondReactionTime(value.toInt()) + 1 },
             )
 
         val rateSection =
             toSectionResponse(
                 page = result.topCompetitionRate,
                 valueSelector = { it.bestCompetitionRate },
+                rankCalculator = { value -> leaderboardRecordRepository.countBetterCompetitionRate(value) + 1 },
             )
 
         return LeaderboardTopPagedResponse(
@@ -213,18 +222,21 @@ class LeaderboardController(
             toWeeklySectionResponse(
                 page = result.topFirstReactionTime,
                 valueSelector = { it.bestFirstReactionTime?.toDouble() },
+                rankCalculator = { value -> weeklyLeaderboardRecordRepository.countBetterFirstReactionTime(value.toInt()) + 1 },
             )
 
         val secondSection =
             toWeeklySectionResponse(
                 page = result.topSecondReactionTime,
                 valueSelector = { it.bestSecondReactionTime?.toDouble() },
+                rankCalculator = { value -> weeklyLeaderboardRecordRepository.countBetterSecondReactionTime(value.toInt()) + 1 },
             )
 
         val rateSection =
             toWeeklySectionResponse(
                 page = result.topCompetitionRate,
                 valueSelector = { it.bestCompetitionRate },
+                rankCalculator = { value -> weeklyLeaderboardRecordRepository.countBetterCompetitionRate(value) + 1 },
             )
 
         return LeaderboardTopPagedResponse(
@@ -262,18 +274,22 @@ class LeaderboardController(
     private fun toSectionResponse(
         page: Page<com.wafflestudio.team8server.leaderboard.model.LeaderboardRecord>,
         valueSelector: (com.wafflestudio.team8server.leaderboard.model.LeaderboardRecord) -> Double?,
+        rankCalculator: (Double) -> Long,
     ): LeaderboardPagedSectionResponse {
         val usersById = loadUsersById(page.content.map { it.userId })
+        val rankCache = mutableMapOf<Double, Long>()
 
         val items =
             page.content.mapNotNull { record ->
                 val value = valueSelector(record) ?: return@mapNotNull null
                 val user = usersById[record.userId] ?: throw ResourceNotFoundException("사용자를 찾을 수 없습니다")
+                val rank = rankCache.getOrPut(value) { rankCalculator(value) }
                 LeaderboardEntryResponse(
                     userId = user.id ?: return@mapNotNull null,
                     nickname = user.nickname,
                     profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
                     value = value,
+                    rank = rank,
                 )
             }
 
@@ -293,18 +309,22 @@ class LeaderboardController(
     private fun toWeeklySectionResponse(
         page: Page<com.wafflestudio.team8server.leaderboard.model.WeeklyLeaderboardRecord>,
         valueSelector: (com.wafflestudio.team8server.leaderboard.model.WeeklyLeaderboardRecord) -> Double?,
+        rankCalculator: (Double) -> Long,
     ): LeaderboardPagedSectionResponse {
         val usersById = loadUsersById(page.content.map { it.userId })
+        val rankCache = mutableMapOf<Double, Long>()
 
         val items =
             page.content.mapNotNull { record ->
                 val value = valueSelector(record) ?: return@mapNotNull null
                 val user = usersById[record.userId] ?: throw ResourceNotFoundException("사용자를 찾을 수 없습니다")
+                val rank = rankCache.getOrPut(value) { rankCalculator(value) }
                 LeaderboardEntryResponse(
                     userId = user.id ?: return@mapNotNull null,
                     nickname = user.nickname,
                     profileImageUrl = profileImageUrlResolver.resolve(user.profileImageUrl),
                     value = value,
+                    rank = rank,
                 )
             }
 

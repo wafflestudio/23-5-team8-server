@@ -21,4 +21,9 @@ data class LeaderboardEntryResponse(
         example = "200.0",
     )
     val value: Double,
+    @Schema(
+        description = "순위 (동일 기록은 같은 순위, 다음 순위는 중복된 만큼 밀림. 예: 1, 1, 3, 4)",
+        example = "1",
+    )
+    val rank: Long,
 )
