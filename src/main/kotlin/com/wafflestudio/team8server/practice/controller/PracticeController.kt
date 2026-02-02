@@ -167,7 +167,8 @@ class PracticeController(
         @RequestBody(required = false) request: PracticeStartRequest?,
     ): PracticeStartResponse {
         val startTimeOption = request?.virtualStartTimeOption ?: sessionConfig.defaultStartTimeOption
-        return practiceService.startPractice(userId, startTimeOption)
+        val randomOffsetMs = request?.randomOffsetMs ?: 0
+        return practiceService.startPractice(userId, startTimeOption, randomOffsetMs)
     }
 
     @Operation(

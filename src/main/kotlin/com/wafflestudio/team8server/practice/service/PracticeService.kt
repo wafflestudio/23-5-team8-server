@@ -2,6 +2,7 @@ package com.wafflestudio.team8server.practice.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.wafflestudio.team8server.common.exception.ActiveSessionExistsException
+import com.wafflestudio.team8server.common.exception.BadRequestException
 import com.wafflestudio.team8server.common.exception.NoActiveSessionException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
@@ -59,7 +60,12 @@ class PracticeService(
     fun startPractice(
         userId: Long,
         startTimeOption: VirtualStartTimeOption,
+        randomOffsetMs: Long = 0,
     ): PracticeStartResponse {
+        // 매크로 방지용 난수 오프셋 검증 (0-999ms)
+        if (randomOffsetMs !in 0..999) {
+            throw BadRequestException("randomOffsetMs는 0에서 999 사이여야 합니다")
+        }
         // 1. 분산 락 획득
         val lockAcquired = practiceSessionService.acquireLock(userId)
         if (!lockAcquired) {
@@ -90,8 +96,8 @@ class PracticeService(
             // 5. 세션 시작 시간 가져오기
             val startTimeMs = timeProvider.currentTimeMillis()
 
-            // 6. 선택된 시작 시간 옵션에서 offset 가져오기
-            val offsetMs = startTimeOption.offsetToTargetMs
+            // 6. 선택된 시작 시간 옵션에서 offset 가져오기 (매크로 방지용 난수 포함)
+            val offsetMs = startTimeOption.offsetToTargetMs + randomOffsetMs
 
             // 7. Redis에 세션 저장 (5분 TTL)
             practiceSessionService.createSession(userId, savedLog.id!!)
