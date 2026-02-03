@@ -37,13 +37,16 @@ class SecurityConfig(
             }.authorizeHttpRequests { auth ->
                 // URL별 권한 설정
                 auth
+                    // 관리자 전용 API
+                    .requestMatchers("/api/courses/import")
+                    .hasRole("ADMIN")
+                    // 인증 없이 접근 가능한 API
                     .requestMatchers(
                         "/api/auth/signup",
                         "/api/auth/login",
                         "/api/auth/kakao/login",
                         "/api/auth/google/login",
                         "/api/courses/search",
-                        "/api/courses/import",
                         "/api/leaderboard",
                         "/api/leaderboard/weekly",
                         "/swagger-ui/**",

@@ -44,7 +44,7 @@ class SocialAuthService(
 
         val existingCredential = socialCredentialRepository.findByProviderAndSocialId(provider, socialId)
         if (existingCredential != null) {
-            val accessToken = jwtTokenProvider.createToken(existingCredential.user.id.ensureNotNull())
+            val accessToken = jwtTokenProvider.createToken(existingCredential.user.id.ensureNotNull(), existingCredential.user.role.name)
             return LoginResponse(
                 accessToken = accessToken,
                 user = UserDto.from(existingCredential.user),
@@ -69,7 +69,7 @@ class SocialAuthService(
         socialCredentialRepository.save(credential)
 
         // JWT 발급 및 응답
-        val accessToken = jwtTokenProvider.createToken(savedUser.id.ensureNotNull())
+        val accessToken = jwtTokenProvider.createToken(savedUser.id.ensureNotNull(), savedUser.role.name)
         return LoginResponse(
             accessToken = accessToken,
             user = UserDto.from(savedUser),
@@ -103,7 +103,7 @@ class SocialAuthService(
 
         val existingCredential = socialCredentialRepository.findByProviderAndSocialId(provider, socialId)
         if (existingCredential != null) {
-            val accessToken = jwtTokenProvider.createToken(existingCredential.user.id.ensureNotNull())
+            val accessToken = jwtTokenProvider.createToken(existingCredential.user.id.ensureNotNull(), existingCredential.user.role.name)
             return LoginResponse(
                 accessToken = accessToken,
                 user = UserDto.from(existingCredential.user),
@@ -125,7 +125,7 @@ class SocialAuthService(
             )
         socialCredentialRepository.save(credential)
 
-        val accessToken = jwtTokenProvider.createToken(savedUser.id.ensureNotNull())
+        val accessToken = jwtTokenProvider.createToken(savedUser.id.ensureNotNull(), savedUser.role.name)
         return LoginResponse(
             accessToken = accessToken,
             user = UserDto.from(savedUser),
