@@ -48,7 +48,12 @@ class PracticeController(
             - TIME_08_29_30: 08:29:30 시작 (수강신청 오픈 30초 전) - 기본값
             - TIME_08_29_45: 08:29:45 시작 (수강신청 오픈 15초 전)
 
-            요청 바디를 생략하면 기본값(TIME_08_29_30)이 사용됩니다.
+            **매크로 방지용 난수 오프셋:**
+            - randomOffsetMs: 0-999ms 범위의 난수 (프론트엔드에서 생성)
+            - targetTime 계산 시 해당 오프셋이 추가되어 매크로 사용을 방지합니다.
+            - 생략 시 0으로 처리됩니다.
+
+            요청 바디를 생략하면 기본값(TIME_08_29_30, randomOffsetMs=0)이 사용됩니다.
             """,
         security = [SecurityRequirement(name = "Bearer Authentication")],
     )
@@ -71,7 +76,33 @@ class PracticeController(
                                       "virtualStartTime": "08:29:30",
                                       "targetTime": "08:30:00",
                                       "timeLimitSeconds": 300,
-                                      "message": "연습 세션이 시작되었습니다. 가상 시계가 08:29:30 로 세팅되었습니다."
+                                      "message": "연습 세션이 시작되었습니다. 가상 시계가 08:29:30 로 세팅되었습니다. (매크로 방지 오프셋: 500ms)"
+                                    }
+                                    """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "잘못된 요청",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "invalid-random-offset",
+                                summary = "randomOffsetMs 범위 초과",
+                                value =
+                                    """
+                                    {
+                                      "timestamp": "2026-01-15T12:00:00",
+                                      "status": 400,
+                                      "error": "Bad Request",
+                                      "message": "randomOffsetMs는 0에서 999 사이여야 합니다",
+                                      "errorCode": "BAD_REQUEST",
+                                      "validationErrors": null
                                     }
                                     """,
                             ),
@@ -143,17 +174,22 @@ class PracticeController(
                     ExampleObject(
                         name = "default",
                         summary = "30초 전 시작(기본값)",
-                        value = """{"virtualStartTimeOption": "TIME_08_29_30"}""",
+                        value = """{"virtualStartTimeOption": "TIME_08_29_30", "randomOffsetMs": 500}""",
                     ),
                     ExampleObject(
                         name = "1-minute-before",
                         summary = "1분 전 시작",
-                        value = """{"virtualStartTimeOption": "TIME_08_29_00"}""",
+                        value = """{"virtualStartTimeOption": "TIME_08_29_00", "randomOffsetMs": 250}""",
                     ),
                     ExampleObject(
                         name = "15-seconds-before",
                         summary = "15초 전 시작",
-                        value = """{"virtualStartTimeOption": "TIME_08_29_45"}""",
+                        value = """{"virtualStartTimeOption": "TIME_08_29_45", "randomOffsetMs": 750}""",
+                    ),
+                    ExampleObject(
+                        name = "without-offset",
+                        summary = "난수 오프셋 없이 시작",
+                        value = """{"virtualStartTimeOption": "TIME_08_29_30"}""",
                     ),
                 ],
             ),
