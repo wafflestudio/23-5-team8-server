@@ -54,6 +54,31 @@ class Course(
     val id: Long? = null,
 )
 
+/**
+ * upsert 과정에서 동일한 자연 키(year, semester, courseNumber, lectureNumber)를 가진 강의를 처리할 때
+ * 기존 row의 PK를 유지하여 연관 데이터가 보존되도록 하기 위함
+ */
+fun Course.withId(id: Long): Course =
+    Course(
+        year = year,
+        semester = semester,
+        classification = classification,
+        college = college,
+        department = department,
+        academicCourse = academicCourse,
+        academicYear = academicYear,
+        courseNumber = courseNumber,
+        lectureNumber = lectureNumber,
+        courseTitle = courseTitle,
+        credit = credit,
+        instructor = instructor,
+        placeAndTime = placeAndTime,
+        quota = quota,
+        freshmanQuota = freshmanQuota,
+        registrationCount = registrationCount,
+        id = id,
+    )
+
 enum class Semester {
     SPRING,
     SUMMER,
