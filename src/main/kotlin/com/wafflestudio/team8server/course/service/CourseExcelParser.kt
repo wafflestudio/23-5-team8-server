@@ -1,12 +1,12 @@
 package com.wafflestudio.team8server.course.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.github.pjfanning.xlsx.StreamingReader
 import com.wafflestudio.team8server.common.exception.BadRequestException
 import com.wafflestudio.team8server.course.model.Course
 import com.wafflestudio.team8server.course.model.Semester
 import org.apache.poi.ss.usermodel.DataFormatter
 import org.apache.poi.ss.usermodel.Row
+import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.multipart.MultipartFile
@@ -15,17 +15,12 @@ import org.springframework.web.multipart.MultipartFile
 class CourseExcelParser {
     private companion object {
         const val HEADER_ROW_INDEX = 2
-        const val DEFAULT_ROW_CACHE_SIZE = 200
-        const val DEFAULT_BUFFER_SIZE = 4096
     }
 
     private val log = LoggerFactory.getLogger(CourseExcelParser::class.java)
     private val formatter = DataFormatter()
     private val objectMapper = ObjectMapper()
 
-    /**
-     * Streaming parse
-     */
     fun parse(
         file: MultipartFile,
         year: Int,
@@ -34,57 +29,47 @@ class CourseExcelParser {
     ): Int {
         if (file.isEmpty) throw BadRequestException("빈 파일입니다.")
 
-        requireRealXlsx(file)
+        requireXlsOrXlsx(file)
 
         var count = 0
 
         file.inputStream.use { input ->
-            StreamingReader
-                .builder()
-                .rowCacheSize(DEFAULT_ROW_CACHE_SIZE)
-                .bufferSize(DEFAULT_BUFFER_SIZE)
-                .open(input)
-                .use { workbook ->
-                    val sheet = workbook.getSheetAt(0) ?: return 0
+            WorkbookFactory.create(input).use { workbook ->
+                val sheet = workbook.getSheetAt(0) ?: return 0
 
-                    var headerIndex: Map<String, Int>? = null
-                    val rowIterator = sheet.iterator()
+                var headerIndex: Map<String, Int>? = null
+                val rowIterator = sheet.iterator()
 
-                    while (rowIterator.hasNext()) {
-                        val row = rowIterator.next()
-                        val rowNum = row.rowNum
+                while (rowIterator.hasNext()) {
+                    val row = rowIterator.next()
+                    val rowNum = row.rowNum
 
-                        if (rowNum == HEADER_ROW_INDEX) {
-                            headerIndex = buildHeaderIndex(row)
-                            log.info("Detected excel headers: {}", headerIndex!!.keys)
-                            continue
-                        }
-
-                        if (rowNum < HEADER_ROW_INDEX + 1) continue
-                        if (headerIndex == null) continue
-                        if (isRowEmpty(row)) continue
-
-                        val course =
-                            parseRow(
-                                row = row,
-                                headerIndex = headerIndex!!,
-                                year = year,
-                                semester = semester,
-                                rowNumForLog = rowNum + 1,
-                            ) ?: continue
-
-                        onCourse(course)
-                        count++
+                    if (rowNum == HEADER_ROW_INDEX) {
+                        headerIndex = buildHeaderIndex(row)
+                        log.info("Detected excel headers: {}", headerIndex!!.keys)
+                        continue
                     }
+
+                    if (rowNum < HEADER_ROW_INDEX + 1) continue
+                    if (headerIndex == null) continue
+                    if (isRowEmpty(row)) continue
+
+                    val course =
+                        parseRow(
+                            row = row,
+                            headerIndex = headerIndex!!,
+                            year = year,
+                            semester = semester,
+                            rowNumForLog = rowNum + 1,
+                        ) ?: continue
+
+                    onCourse(course)
+                    count++
                 }
+            }
         }
 
         return count
-    }
-
-    private fun isXlsx(file: MultipartFile): Boolean {
-        val name = file.originalFilename?.lowercase() ?: return false
-        return name.endsWith(".xlsx")
     }
 
     private fun parseRow(
@@ -100,6 +85,7 @@ class CourseExcelParser {
         val quotaPair = parseQuotaCell(row, headerIndex)
         val quota = quotaPair?.first
         val freshmanQuota = quotaPair?.second
+        val registrationCount = intCell(row, headerIndex, "수강신청인원")
 
         if (courseNumber.isNullOrBlank() || lectureNumber.isNullOrBlank() || courseTitle.isNullOrBlank() || quota == null) {
             log.debug(
@@ -149,6 +135,7 @@ class CourseExcelParser {
             placeAndTime = placeAndTime,
             quota = quota,
             freshmanQuota = freshmanQuota,
+            registrationCount = registrationCount,
         )
     }
 
@@ -225,54 +212,11 @@ class CourseExcelParser {
         return total to freshmanQuota
     }
 
-    private fun requireRealXlsx(file: MultipartFile) {
+    private fun requireXlsOrXlsx(file: MultipartFile) {
         val name = file.originalFilename?.lowercase()
-        if (name == null || !name.endsWith(".xlsx")) {
-            throw BadRequestException(".xlsx 파일만 지원합니다. Excel에서 '다른 이름으로 저장'으로 .xlsx로 변환해 업로드해주세요.")
+        if (name == null || (!name.endsWith(".xls") && !name.endsWith(".xlsx"))) {
+            throw BadRequestException(".xls 또는 .xlsx 파일만 지원합니다.")
         }
-
-        val signature = readSignature(file, 8)
-        if (isOle2Xls(signature)) {
-            // 확장자만 xlsx로 바꾼 .xls 같은 케이스
-            throw BadRequestException("업로드한 파일이 .xlsx 형식이 아닙니다(.xls로 추정). Excel에서 '다른 이름으로 저장'으로 .xlsx로 다시 저장해 업로드해주세요.")
-        }
-
-        if (!isZipXlsx(signature)) {
-            // zip도 아니면 xlsx일 수 없음
-            throw BadRequestException("업로드한 파일이 .xlsx 형식이 아닙니다. Excel에서 '다른 이름으로 저장'으로 .xlsx로 변환해 업로드해주세요.")
-        }
-    }
-
-    private fun readSignature(
-        file: MultipartFile,
-        n: Int,
-    ): ByteArray {
-        val bytes = file.bytes // MultipartFile 구현이 스트림을 재사용 못 해도 안전
-        if (bytes.isEmpty()) return ByteArray(0)
-        val len = minOf(n, bytes.size)
-        return bytes.copyOfRange(0, len)
-    }
-
-    private fun isZipXlsx(sig: ByteArray): Boolean {
-        // ZIP: 50 4B 03 04 (local file header) or other PK variants
-        return sig.size >= 2 && sig[0] == 0x50.toByte() && sig[1] == 0x4B.toByte()
-    }
-
-    private fun isOle2Xls(sig: ByteArray): Boolean {
-        // OLE2: D0 CF 11 E0 A1 B1 1A E1
-        val ole2 =
-            byteArrayOf(
-                0xD0.toByte(),
-                0xCF.toByte(),
-                0x11.toByte(),
-                0xE0.toByte(),
-                0xA1.toByte(),
-                0xB1.toByte(),
-                0x1A.toByte(),
-                0xE1.toByte(),
-            )
-        if (sig.size < ole2.size) return false
-        return ole2.indices.all { i -> sig[i] == ole2[i] }
     }
 }
 

@@ -47,6 +47,8 @@ class Course(
     val quota: Int,
     @Column(name = "freshman_quota")
     val freshmanQuota: Int? = 0,
+    @Column(name = "registration_count")
+    val registrationCount: Int? = null,
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
