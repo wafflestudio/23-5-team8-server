@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDateTime
 
-@Tag(name = "Admin Course Sync", description = "관리자 강의 동기화 제어 API")
+@Tag(name = "Admin Course Sync", description = "강의 동기화 제어 API (Admin 전용)")
 @RestController
-@RequestMapping("/api/admin/course-sync")
-class AdminCourseSyncController(
+@RequestMapping("/api/courses/course-sync")
+class CourseSyncController(
     private val service: CourseSyncService,
 ) {
     @Operation(summary = "자동 동기화 ON")
