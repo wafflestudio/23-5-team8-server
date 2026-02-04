@@ -36,10 +36,6 @@ class PracticeDetail(
     val capacity: Int,
     @Column(name = "total_competitors", nullable = false)
     val totalCompetitors: Int,
-    @Column(name = "distribution_scale", nullable = false)
-    val distributionScale: Double,
-    @Column(name = "distribution_shape", nullable = false)
-    val distributionShape: Double,
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
