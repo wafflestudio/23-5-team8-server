@@ -97,3 +97,11 @@ class S3NotConfiguredException(
         message = message,
         errorCode = "S3_NOT_CONFIGURED",
     )
+
+// 이미 동기화 작업이 실행되고 있는 경우
+class CourseSyncAlreadyRunningException(
+    message: String = "이미 동기화 작업이 실행 중입니다",
+) : BusinessException(
+        message = message,
+        errorCode = "COURSE_SYNC_ALREADY_RUNNING",
+    )
