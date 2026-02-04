@@ -47,7 +47,7 @@ class NoticeController(
         noticeId: Long,
     ): NoticeResponse = noticeService.getNotice(noticeId)
 
-    @Operation(summary = "공지사항 등록", description = "새로운 공지사항을 등록합니다. (로그인 필요)")
+    @Operation(summary = "공지사항 등록", description = "새로운 공지사항을 등록합니다. (관리자 전용)")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createNotice(
@@ -55,7 +55,7 @@ class NoticeController(
         @Valid @RequestBody request: CreateNoticeRequest,
     ): NoticeResponse = noticeService.createNotice(request)
 
-    @Operation(summary = "공지사항 수정", description = "기존 공지사항을 수정합니다. (로그인 필요)")
+    @Operation(summary = "공지사항 수정", description = "기존 공지사항을 수정합니다. (관리자 전용)")
     @PutMapping("/{noticeId}")
     fun updateNotice(
         @Parameter(hidden = true) @LoggedInUserId userId: Long,
@@ -65,7 +65,7 @@ class NoticeController(
         @Valid @RequestBody request: UpdateNoticeRequest,
     ): NoticeResponse = noticeService.updateNotice(noticeId, request)
 
-    @Operation(summary = "공지사항 삭제", description = "공지사항을 삭제합니다. (로그인 필요)")
+    @Operation(summary = "공지사항 삭제", description = "공지사항을 삭제합니다. (관리자 전용)")
     @DeleteMapping("/{noticeId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun deleteNotice(
