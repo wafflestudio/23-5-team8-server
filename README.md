@@ -1,6 +1,7 @@
 # AllClear Server
 
-서울대학교 수강신청 연습 서비스 - 백엔드 레포지토리
+**서울대학교 수강신청 연습 서비스 - 백엔드 레포지토리**
+
 ![메인페이지](docs/images/메인페이지.png)
 
 - 서비스: https://allclear.codes
