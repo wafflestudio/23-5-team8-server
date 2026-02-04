@@ -14,10 +14,12 @@ class CourseSyncProperties(
     )
 
     data class Sugang(
-        /**
-         * 예: https://sugang.snu.ac.kr/...
-         */
-        val downloadUrlTemplate: String? = null,
+        val excelUrl: String = "https://sugang.snu.ac.kr/sugang/cc/cc100InterfaceExcel.action",
+        val refererUrl: String = "https://sugang.snu.ac.kr/sugang/cc/cc100InterfaceSrch.action",
+        val pageSize: Int = 9999,
+        val language: String = "ko",
+        val connectTimeoutMillis: Long = 5_000,
+        val readTimeoutMillis: Long = 30_000,
     )
 
     data class DefaultTarget(
