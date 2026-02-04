@@ -38,8 +38,10 @@ class SecurityConfig(
                 // URL별 권한 설정
                 auth
                     // 관리자 전용 API
-                    .requestMatchers("/api/courses/import")
-                    .hasRole("ADMIN")
+                    .requestMatchers(
+                        "/api/courses/import",
+                        "/api/courses/course-sync/**",
+                    ).hasRole("ADMIN")
                     .requestMatchers(
                         org.springframework.http.HttpMethod.POST,
                         "/api/notices",

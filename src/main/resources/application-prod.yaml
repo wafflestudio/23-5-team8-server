@@ -35,6 +35,21 @@ oauth:
     issuer: https://accounts.google.com
     jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
 
+course-sync:
+  auto:
+    fixedDelayMillis: 10800000 # 3시간 (자유롭게 수정)
+  sugang:
+    excelUrl: "https://sugang.snu.ac.kr/sugang/cc/cc100InterfaceExcel.action"
+    refererUrl: "https://sugang.snu.ac.kr/sugang/cc/cc100InterfaceSrch.action"
+    pageSize: 9999
+    language: "ko"
+    connectTimeoutMillis: 5000
+    readTimeoutMillis: 30000
+  defaultTarget:
+    year: 2026
+    semester: SPRING
+
+
 # AWS S3 설정 (prod 환경에서만 활성화)
 aws:
   s3:
