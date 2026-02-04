@@ -398,6 +398,7 @@ class PracticeService(
                     placeAndTime = course.placeAndTime,
                     quota = course.quota,
                     freshmanQuota = course.freshmanQuota,
+                    registrationCount = course.registrationCount,
                 )
             }
     }
