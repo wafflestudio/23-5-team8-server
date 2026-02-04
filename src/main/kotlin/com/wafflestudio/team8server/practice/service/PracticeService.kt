@@ -109,7 +109,7 @@ class PracticeService(
                 virtualStartTime = startTimeOption.displayTime,
                 targetTime = sessionConfig.targetTime,
                 timeLimitSeconds = sessionConfig.timeLimitSeconds,
-                message = "연습 세션이 시작되었습니다. 가상 시계가 ${startTimeOption.displayTime} 로 세팅되었습니다.",
+                message = "연습 세션이 시작되었습니다. 가상 시계가 ${startTimeOption.displayTime} 로 세팅되었습니다. (매크로 방지 오프셋: ${randomOffsetMs}ms)",
             )
         } finally {
             // 8. 락 해제
