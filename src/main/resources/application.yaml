@@ -41,12 +41,6 @@ practice:
     early-click-recording-window-ms: 1000 # Early click 기록 범위 (ms) - 이 값 이내로 일찍 클릭한 경우 DB에 기록
     lock-ttl-seconds: 10                 # 분산 락 TTL (초) - 서버 크래시 시 안전장치
 
-  # 로그정규분포 파라미터 설정
-  distribution:
-    default:
-      scale: 7.31322                    # μ (mu) - 로그정규분포의 scale 파라미터
-      shape: 2.2                        # σ (sigma) - 로그정규분포의 shape 파라미터
-
 course:
   import:
     batch-size: 500

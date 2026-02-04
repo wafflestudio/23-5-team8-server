@@ -13,7 +13,6 @@ import com.wafflestudio.team8server.course.dto.CourseDetailResponse
 import com.wafflestudio.team8server.course.model.getEffectiveQuota
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.leaderboard.service.LeaderboardService
-import com.wafflestudio.team8server.practice.config.PracticeDistributionConfig
 import com.wafflestudio.team8server.practice.config.PracticeSessionConfig
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptRequest
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResponse
@@ -26,7 +25,6 @@ import com.wafflestudio.team8server.practice.model.PracticeDetail
 import com.wafflestudio.team8server.practice.model.PracticeLog
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
 import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
-import com.wafflestudio.team8server.practice.util.LogNormalDistributionUtil
 import com.wafflestudio.team8server.preenroll.repository.PreEnrollRepository
 import com.wafflestudio.team8server.preenroll.util.CourseScheduleUtil
 import com.wafflestudio.team8server.user.repository.UserRepository
@@ -43,7 +41,7 @@ class PracticeService(
     private val preEnrollRepository: PreEnrollRepository,
     private val practiceSessionService: PracticeSessionService,
     private val sessionConfig: PracticeSessionConfig,
-    private val distributionConfig: PracticeDistributionConfig,
+    private val reactionTimePercentileService: ReactionTimePercentileService,
     private val enrollmentPeriodProperties: EnrollmentPeriodProperties,
     private val timeProvider: TimeProvider,
     private val leaderboardService: LeaderboardService,
@@ -241,26 +239,16 @@ class PracticeService(
             }
         }
 
-        // 10. 교과분류 기반 분포 파라미터 결정
-        val distributionParams = distributionConfig.getParamsForClassification(course.classification)
+        // 10. 백분위(Percentile) 계산 (DB 기반)
+        val percentile = reactionTimePercentileService.calculatePercentile(userLatencyMs)
 
-        // 11. 로그정규분포 계산
-        val distributionUtil =
-            LogNormalDistributionUtil(
-                scale = distributionParams.scale,
-                shape = distributionParams.shape,
-            )
+        // 11. 등수(Rank) 산출
+        val rank = reactionTimePercentileService.calculateRank(percentile, totalCompetitors)
 
-        // 12. 백분위(Percentile) 계산
-        val percentile = distributionUtil.calculatePercentile(userLatencyMs)
+        // 12. 성공 여부 판정
+        val isSuccess = reactionTimePercentileService.isSuccessful(rank, capacity)
 
-        // 13. 등수(Rank) 산출
-        val rank = distributionUtil.calculateRank(percentile, totalCompetitors)
-
-        // 14. 성공 여부 판정
-        val isSuccess = distributionUtil.isSuccessful(rank, capacity)
-
-        // 15. PracticeDetail 저장 (통계 정보 포함, Course 정보 복사)
+        // 13. PracticeDetail 저장 (통계 정보 포함, Course 정보 복사)
         val practiceDetail =
             PracticeDetail(
                 practiceLog = practiceLog,
@@ -273,8 +261,6 @@ class PracticeService(
                 percentile = percentile,
                 capacity = capacity,
                 totalCompetitors = totalCompetitors,
-                distributionScale = distributionParams.scale,
-                distributionShape = distributionParams.shape,
             )
         practiceDetailRepository.save(practiceDetail)
 
