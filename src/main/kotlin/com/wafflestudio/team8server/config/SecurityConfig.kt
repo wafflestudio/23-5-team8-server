@@ -40,6 +40,18 @@ class SecurityConfig(
                     // 관리자 전용 API
                     .requestMatchers("/api/courses/import")
                     .hasRole("ADMIN")
+                    .requestMatchers(
+                        org.springframework.http.HttpMethod.POST,
+                        "/api/notices",
+                    ).hasRole("ADMIN")
+                    .requestMatchers(
+                        org.springframework.http.HttpMethod.PUT,
+                        "/api/notices/{noticeId}",
+                    ).hasRole("ADMIN")
+                    .requestMatchers(
+                        org.springframework.http.HttpMethod.DELETE,
+                        "/api/notices/{noticeId}",
+                    ).hasRole("ADMIN")
                     // 인증 없이 접근 가능한 API
                     .requestMatchers(
                         "/api/auth/signup",
@@ -52,6 +64,11 @@ class SecurityConfig(
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/swagger-ui.html",
+                    ).permitAll()
+                    .requestMatchers(
+                        org.springframework.http.HttpMethod.GET,
+                        "/api/notices",
+                        "/api/notices/{noticeId}",
                     ).permitAll()
                     .anyRequest()
                     .authenticated()
