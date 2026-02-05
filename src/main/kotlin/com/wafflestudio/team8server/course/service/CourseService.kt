@@ -34,7 +34,7 @@ class CourseService(
             PageRequest.of(
                 request.page,
                 request.size,
-                Sort.by("courseTitle").ascending(),
+                Sort.by("courseTitle").ascending().and(Sort.by("id").ascending()),
             )
 
         val specification =

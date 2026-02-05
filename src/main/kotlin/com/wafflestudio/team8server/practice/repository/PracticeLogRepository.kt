@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 
 interface PracticeLogRepository : JpaRepository<PracticeLog, Long> {
-    fun findByUserIdOrderByPracticeAtDesc(
+    fun findByUserIdOrderByPracticeAtDescIdDesc(
         userId: Long,
         pageable: Pageable,
     ): Page<PracticeLog>
@@ -17,7 +17,7 @@ interface PracticeLogRepository : JpaRepository<PracticeLog, Long> {
         SELECT pl FROM PracticeLog pl
         WHERE pl.user.id = :userId
         AND EXISTS (SELECT 1 FROM PracticeDetail pd WHERE pd.practiceLog = pl)
-        ORDER BY pl.practiceAt DESC
+        ORDER BY pl.practiceAt DESC, pl.id DESC
         """,
     )
     fun findByUserIdWithAttemptsOrderByPracticeAtDesc(
@@ -25,14 +25,14 @@ interface PracticeLogRepository : JpaRepository<PracticeLog, Long> {
         pageable: Pageable,
     ): Page<PracticeLog>
 
-    fun findFirstByUserIdOrderByPracticeAtDesc(userId: Long): PracticeLog?
+    fun findFirstByUserIdOrderByPracticeAtDescIdDesc(userId: Long): PracticeLog?
 
     @Query(
         """
         SELECT pl FROM PracticeLog pl
         WHERE pl.user.id = :userId
         AND EXISTS (SELECT 1 FROM PracticeDetail pd WHERE pd.practiceLog = pl)
-        ORDER BY pl.practiceAt DESC
+        ORDER BY pl.practiceAt DESC, pl.id DESC
         LIMIT 1
         """,
     )
