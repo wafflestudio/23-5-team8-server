@@ -15,4 +15,6 @@ interface SocialCredentialRepository : JpaRepository<SocialCredential, Long> {
         provider: String,
         socialId: String,
     ): Boolean
+
+    fun findAllByUserId(userId: Long): List<SocialCredential>
 }

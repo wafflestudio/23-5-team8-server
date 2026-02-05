@@ -19,10 +19,49 @@ class GoogleOAuthClient(
 ) {
     private val restTemplate = RestTemplate()
 
-    fun exchangeCodeForIdToken(
+    /**
+     * 구글 token revoke
+     * https://oauth2.googleapis.com/revoke
+     * Content-Type: application/x-www-form-urlencoded
+     * token={refresh_token or access_token}
+     */
+    fun revokeToken(token: String) {
+        val google = props.google
+        if (token.isBlank()) {
+            throw UnauthorizedException("구글 revoke 토큰이 비어있습니다")
+        }
+
+        val headers =
+            HttpHeaders().apply {
+                contentType = MediaType.APPLICATION_FORM_URLENCODED
+                accept = listOf(MediaType.APPLICATION_JSON)
+            }
+
+        val form: MultiValueMap<String, String> =
+            LinkedMultiValueMap<String, String>().apply {
+                add("token", token)
+            }
+
+        val request = HttpEntity(form, headers)
+
+        try {
+            restTemplate.exchange(
+                google.revokeUri,
+                HttpMethod.POST,
+                request,
+                String::class.java,
+            )
+        } catch (e: HttpStatusCodeException) {
+            throw UnauthorizedException("구글 연결 해제에 실패했습니다")
+        } catch (e: Exception) {
+            throw UnauthorizedException("구글 연결 해제에 실패했습니다")
+        }
+    }
+
+    fun exchangeCodeForTokenResult(
         code: String,
         redirectUri: String?,
-    ): String {
+    ): GoogleTokenResult {
         if (redirectUri.isNullOrBlank()) {
             // 구글은 code 교환에 redirectUri가 필수인 경우가 대부분이라 여기서 강제
             throw UnauthorizedException("redirectUri가 누락되었습니다")
@@ -59,7 +98,11 @@ class GoogleOAuthClient(
             val body = response.body ?: throw UnauthorizedException("구글 토큰 발급에 실패했습니다")
             val idToken = body.idToken ?: throw UnauthorizedException("구글 id_token이 응답에 포함되지 않았습니다")
 
-            return idToken
+            return GoogleTokenResult(
+                idToken = idToken,
+                accessToken = body.accessToken,
+                refreshToken = body.refreshToken,
+            )
         } catch (e: HttpStatusCodeException) {
             throw UnauthorizedException("구글 토큰 발급에 실패했습니다")
         } catch (e: Exception) {
@@ -68,7 +111,17 @@ class GoogleOAuthClient(
     }
 }
 
+data class GoogleTokenResult(
+    val idToken: String,
+    val accessToken: String?,
+    val refreshToken: String?,
+)
+
 private data class GoogleTokenResponse(
     @JsonProperty("id_token")
     val idToken: String?,
+    @JsonProperty("access_token")
+    val accessToken: String?,
+    @JsonProperty("refresh_token")
+    var refreshToken: String?,
 )

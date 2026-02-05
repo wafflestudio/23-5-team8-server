@@ -7,6 +7,7 @@ import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest.authorizationCode
 import org.springframework.stereotype.Component
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
@@ -25,6 +26,47 @@ class KakaoOAuthClient(
     ): KakaoUserInfo {
         val accessToken = exchangeCodeForAccessToken(authorizationCode, redirectUri)
         return fetchUserInfo(accessToken)
+    }
+
+    /**
+     * 카카오 unlink (Admin Key 기반)
+     * https://kapi.kakao.com/v1/user/unlink
+     * Authorization: KakaoAK {adminKey}
+     * target_id_type=user_id, target_id={socialId}
+     */
+    fun unlinkUser(socialId: String) {
+        val kakao = props.kakao
+        if (kakao.adminKey.isBlank()) {
+            throw UnauthorizedException("카카오 admin key가 설정되지 않았습니다")
+        }
+
+        val headers =
+            HttpHeaders().apply {
+                contentType = MediaType.APPLICATION_FORM_URLENCODED
+                accept = listOf(MediaType.APPLICATION_JSON)
+                set("Authorization", "KakaoAK ${kakao.adminKey}")
+            }
+
+        val form: MultiValueMap<String, String> =
+            LinkedMultiValueMap<String, String>().apply {
+                add("target_id_type", "user_id")
+                add("target_id", socialId)
+            }
+
+        val request = HttpEntity(form, headers)
+
+        try {
+            restTemplate.exchange(
+                kakao.unlinkUri,
+                HttpMethod.POST,
+                request,
+                String::class.java,
+            )
+        } catch (e: HttpStatusCodeException) {
+            throw UnauthorizedException("카카오 연결 해제에 실패했습니다")
+        } catch (e: Exception) {
+            throw UnauthorizedException("카카오 연결 해제에 실패했습니다")
+        }
     }
 
     private fun exchangeCodeForAccessToken(
