@@ -29,4 +29,6 @@ class SocialCredential(
     val provider: String, // provider에 따라 "kakao" or "google"
     @Column(name = "social_id", nullable = false, length = 255)
     val socialId: String,
+    @Column(name = "refresh_token", nullable = true, length = 2048)
+    var refreshToken: String? = null,
 ) : BaseEntity()

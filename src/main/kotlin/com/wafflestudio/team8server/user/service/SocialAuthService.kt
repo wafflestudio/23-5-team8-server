@@ -81,12 +81,14 @@ class SocialAuthService(
         code: String,
         redirectUri: String?,
     ): LoginResponse {
-        val idToken =
+        val tokenResult =
             try {
-                googleOAuthClient.exchangeCodeForIdToken(code, redirectUri)
+                googleOAuthClient.exchangeCodeForTokenResult(code, redirectUri)
             } catch (e: Exception) {
                 throw UnauthorizedException("구글 인증에 실패했습니다")
             }
+
+        val idToken = tokenResult.idToken
 
         val googleUserInfo =
             try {
@@ -95,14 +97,15 @@ class SocialAuthService(
                 throw UnauthorizedException("구글 인증에 실패했습니다")
             }
 
-        // val email =
-        //    googleUserInfo.email ?: throw SocialEmailRequiredException()
-
         val provider = SocialProvider.GOOGLE.dbValue()
         val socialId = googleUserInfo.sub
 
         val existingCredential = socialCredentialRepository.findByProviderAndSocialId(provider, socialId)
         if (existingCredential != null) {
+            // refresh_token은 응답에 포함되지 않는 경우가 흔하므로, null이면 기존 값을 보존한다.
+            if (!tokenResult.refreshToken.isNullOrBlank()) {
+                existingCredential.refreshToken = tokenResult.refreshToken
+            }
             val accessToken = jwtTokenProvider.createToken(existingCredential.user.id.ensureNotNull(), existingCredential.user.role.name)
             return LoginResponse(
                 accessToken = accessToken,
@@ -113,7 +116,7 @@ class SocialAuthService(
         val user =
             User(
                 nickname = googleUserInfo.name ?: NicknameGenerator.generateRandomNickname(),
-                profileImageUrl = null, // googleUserInfo.picture,
+                profileImageUrl = null,
             )
         val savedUser = userRepository.save(user)
 
@@ -122,6 +125,7 @@ class SocialAuthService(
                 user = savedUser,
                 provider = provider,
                 socialId = socialId,
+                refreshToken = tokenResult.refreshToken,
             )
         socialCredentialRepository.save(credential)
 
