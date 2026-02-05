@@ -5,6 +5,7 @@ import com.wafflestudio.team8server.common.exception.ErrorResponse
 import com.wafflestudio.team8server.practice.dto.PracticeResultResponse
 import com.wafflestudio.team8server.practice.dto.PracticeSessionListResponse
 import com.wafflestudio.team8server.user.dto.ChangePasswordRequest
+import com.wafflestudio.team8server.user.dto.DeleteAccountRequest
 import com.wafflestudio.team8server.user.dto.MyPageResponse
 import com.wafflestudio.team8server.user.dto.PresignedUrlRequest
 import com.wafflestudio.team8server.user.dto.PresignedUrlResponse
@@ -313,13 +314,19 @@ class MyPageController(
                 description = "사용자를 찾을 수 없음",
                 content = [Content(schema = Schema(implementation = ErrorResponse::class))],
             ),
+            ApiResponse(
+                responseCode = "400",
+                description = "요청 오류 (로컬 비밀번호 불일치 / 구글 재로그인 필요 등)",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
         ],
     )
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun deleteAccount(
         @Parameter(hidden = true) @LoggedInUserId userId: Long,
-    ) = myPageService.deleteAccount(userId)
+        @RequestBody(required = false) request: DeleteAccountRequest?,
+    ) = myPageService.deleteAccount(userId, request?.password)
 
     @Operation(
         summary = "프로필 이미지 업로드용 Presigned URL 생성",
