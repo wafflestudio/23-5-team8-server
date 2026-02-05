@@ -10,6 +10,18 @@ import org.springframework.data.jpa.repository.Query
 interface CourseRepository :
     JpaRepository<Course, Long>,
     JpaSpecificationExecutor<Course> {
+    fun findAllByYearAndSemester(
+        year: Int,
+        semester: Semester,
+    ): List<Course>
+
+    fun findByYearAndSemesterAndCourseNumberAndLectureNumber(
+        year: Int,
+        semester: Semester,
+        courseNumber: String,
+        lectureNumber: String,
+    ): Course?
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(
         """

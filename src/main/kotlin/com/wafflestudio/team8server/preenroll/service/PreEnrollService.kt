@@ -74,6 +74,7 @@ class PreEnrollService(
                             placeAndTime = course.placeAndTime,
                             quota = course.quota,
                             freshmanQuota = course.freshmanQuota,
+                            registrationCount = course.registrationCount,
                         ),
                     cartCount = preEnroll.cartCount,
                 )
@@ -146,6 +147,7 @@ class PreEnrollService(
                     placeAndTime = course.placeAndTime,
                     quota = course.quota,
                     freshmanQuota = course.freshmanQuota,
+                    registrationCount = course.registrationCount,
                 ),
             cartCount = saved.cartCount,
         )
@@ -198,6 +200,7 @@ class PreEnrollService(
                     placeAndTime = course.placeAndTime,
                     quota = course.quota,
                     freshmanQuota = course.freshmanQuota,
+                    registrationCount = course.registrationCount,
                 ),
             cartCount = saved.cartCount,
         )

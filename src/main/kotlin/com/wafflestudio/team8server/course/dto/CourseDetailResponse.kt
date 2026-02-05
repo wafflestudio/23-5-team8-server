@@ -110,4 +110,11 @@ data class CourseDetailResponse(
         requiredMode = Schema.RequiredMode.NOT_REQUIRED,
     )
     val freshmanQuota: Int?,
+    @Schema(
+        description = "수강신청인원",
+        example = "42",
+        nullable = true,
+        requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+    )
+    val registrationCount: Int?,
 )

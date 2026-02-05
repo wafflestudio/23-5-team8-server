@@ -1,6 +1,7 @@
 package com.wafflestudio.team8server.user.service
 
 import com.wafflestudio.team8server.common.dto.PageInfo
+import com.wafflestudio.team8server.common.exception.BadRequestException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.common.exception.S3NotConfiguredException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
@@ -17,8 +18,12 @@ import com.wafflestudio.team8server.user.dto.PresignedUrlRequest
 import com.wafflestudio.team8server.user.dto.PresignedUrlResponse
 import com.wafflestudio.team8server.user.dto.UpdateProfileImageRequest
 import com.wafflestudio.team8server.user.dto.UpdateProfileRequest
+import com.wafflestudio.team8server.user.enum.SocialProvider
 import com.wafflestudio.team8server.user.repository.LocalCredentialRepository
+import com.wafflestudio.team8server.user.repository.SocialCredentialRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
+import com.wafflestudio.team8server.user.service.social.google.GoogleOAuthClient
+import com.wafflestudio.team8server.user.service.social.kakao.KakaoOAuthClient
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
@@ -34,6 +39,9 @@ class MyPageService(
     private val practiceLogRepository: PracticeLogRepository,
     private val practiceDetailRepository: PracticeDetailRepository,
     private val profileImageUrlResolver: ProfileImageUrlResolver,
+    private val socialCredentialRepository: SocialCredentialRepository,
+    private val kakaoOAuthClient: KakaoOAuthClient,
+    private val googleOAuthClient: GoogleOAuthClient,
     @Autowired(required = false)
     private val s3Service: S3Service?,
 ) {
@@ -115,11 +123,47 @@ class MyPageService(
     }
 
     @Transactional
-    fun deleteAccount(userId: Long) {
+    fun deleteAccount(
+        userId: Long,
+        password: String?,
+    ) {
         val user =
             userRepository
                 .findById(userId)
                 .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
+
+        // 1) 로컬(이메일) 유저라면 비밀번호 재확인
+        val localCredential = localCredentialRepository.findByUserId(userId)
+        if (localCredential != null) {
+            val raw = password ?: throw BadRequestException("비밀번호를 입력해주세요")
+            val matches = passwordEncoder.matches(raw, localCredential.passwordHash)
+            if (!matches) {
+                throw BadRequestException("비밀번호가 일치하지 않습니다")
+            }
+        }
+
+        // 2) 소셜 연결 해제
+        val credentials = socialCredentialRepository.findAllByUserId(userId)
+
+        credentials.forEach { credential ->
+            when (credential.provider) {
+                SocialProvider.KAKAO.dbValue() -> {
+                    kakaoOAuthClient.unlinkUser(credential.socialId)
+                }
+                SocialProvider.GOOGLE.dbValue() -> {
+                    val refreshToken =
+                        credential.refreshToken
+                            ?: throw BadRequestException(
+                                "구글 계정은 탈퇴를 위해 한 번 더 로그인이 필요합니다. 재로그인 후 다시 시도해주세요.",
+                            )
+                    googleOAuthClient.revokeToken(refreshToken)
+                }
+                else -> {
+                    // 정의되지 않은 provider는 무시
+                }
+            }
+        }
+
         userRepository.delete(user)
     }
 
