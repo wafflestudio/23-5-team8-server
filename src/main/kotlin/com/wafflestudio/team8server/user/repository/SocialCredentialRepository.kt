@@ -17,4 +17,6 @@ interface SocialCredentialRepository : JpaRepository<SocialCredential, Long> {
     ): Boolean
 
     fun findAllByUserId(userId: Long): List<SocialCredential>
+
+    fun deleteAllByUserId(userId: Long)
 }

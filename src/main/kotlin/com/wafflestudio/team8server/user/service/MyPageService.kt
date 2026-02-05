@@ -164,6 +164,8 @@ class MyPageService(
             }
         }
 
+        localCredentialRepository.deleteByUserId(userId)
+        socialCredentialRepository.deleteAllByUserId(userId)
         userRepository.delete(user)
     }
 
