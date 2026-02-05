@@ -67,18 +67,35 @@
 | | `POST /api/auth/logout` | 로그아웃 |
 | 강의 | `GET /api/courses/search` | 강의 검색 |
 | | `POST /api/courses/import` | 강의 데이터 임포트 (Admin) |
+| 강의 동기화 | `POST /api/courses/course-sync/auto/enable` | 자동 동기화 활성화 (Admin) |
+| | `POST /api/courses/course-sync/auto/disable` | 자동 동기화 비활성화 (Admin) |
+| | `GET /api/courses/course-sync/auto` | 자동 동기화 상태 조회 (Admin) |
+| | `POST /api/courses/course-sync/run` | 즉시 동기화 실행 (Admin) |
+| 공지사항 | `GET /api/notices` | 공지사항 목록 조회 (고정글 우선) |
+| | `GET /api/notices/{noticeId}` | 공지사항 상세 조회 |
+| | `POST /api/notices` | 공지사항 작성 (Admin) |
+| | `PUT /api/notices/{noticeId}` | 공지사항 수정 (Admin) |
+| | `DELETE /api/notices/{noticeId}` | 공지사항 삭제 (Admin) |
 | 연습 | `POST /api/practice/start` | 연습 세션 시작 |
 | | `POST /api/practice/attempt` | 수강신청 시도 |
 | | `POST /api/practice/end` | 연습 세션 종료 |
 | | `GET /api/practice/enrolled-courses` | 성공한 강의 목록 |
 | 장바구니 | `GET /api/pre-enrolls` | 장바구니 조회 |
 | | `POST /api/pre-enrolls` | 강의 추가 |
-| | `DELETE /api/pre-enrolls/{courseId}` | 강의 삭제 |
+| | `PATCH /api/pre-enrolls/{preEnrollId}` | 담은 수 수정 |
+| | `DELETE /api/pre-enrolls/{preEnrollId}` | 강의 삭제 |
 | 리더보드 | `GET /api/leaderboard` | 전체 리더보드 |
 | | `GET /api/leaderboard/weekly` | 주간 리더보드 |
 | | `GET /api/leaderboard/me` | 내 기록 |
-| 마이페이지 | `GET /api/my-page` | 프로필 조회 |
-| | `PATCH /api/my-page` | 프로필 수정 |
+| 마이페이지 | `GET /api/mypage` | 프로필 조회 |
+| | `PATCH /api/mypage/profile` | 닉네임 수정 |
+| | `PATCH /api/mypage/password` | 비밀번호 변경 |
+| | `GET /api/mypage/practice-sessions` | 연습 세션 이력 조회 |
+| | `GET /api/mypage/practice-sessions/{practiceLogId}` | 연습 세션 상세 조회 |
+| | `POST /api/mypage/profile-image/presigned-url` | 프로필 이미지 업로드 URL 발급 |
+| | `PATCH /api/mypage/profile-image` | 프로필 이미지 저장 |
+| | `DELETE /api/mypage/profile-image` | 프로필 이미지 삭제 |
+| | `DELETE /api/mypage` | 회원 탈퇴 |
 
 ## 프로젝트 구조
 
@@ -87,7 +104,8 @@ src/main/kotlin/com/wafflestudio/team8server/
 ├── config/          # 설정 (Security, Redis, S3, OAuth)
 ├── common/          # 공통 유틸리티 (예외, 인증, DTO)
 ├── user/            # 사용자 관리 (회원가입, 로그인, 마이페이지)
-├── course/          # 강의 관리 (검색, 임포트)
+├── course/          # 강의 관리 (검색, 임포트, 동기화)
+├── notice/          # 공지사항 관리
 ├── practice/        # 수강신청 연습 시뮬레이션
 ├── preenroll/       # 장바구니
 └── leaderboard/     # 리더보드
