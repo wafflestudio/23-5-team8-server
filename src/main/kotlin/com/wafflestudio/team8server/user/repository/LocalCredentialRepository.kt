@@ -14,4 +14,6 @@ interface LocalCredentialRepository : JpaRepository<LocalCredential, Long> {
 
     // 사용자 ID로 인증 정보 조회 (비밀번호 변경 시 사용)
     fun findByUserId(userId: Long): LocalCredential?
+
+    fun deleteByUserId(userId: Long)
 }
