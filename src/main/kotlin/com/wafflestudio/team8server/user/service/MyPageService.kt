@@ -123,12 +123,26 @@ class MyPageService(
     }
 
     @Transactional
-    fun deleteAccount(userId: Long) {
+    fun deleteAccount(
+        userId: Long,
+        password: String?,
+    ) {
         val user =
             userRepository
                 .findById(userId)
                 .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
 
+        // 1) 로컬(이메일) 유저라면 비밀번호 재확인
+        val localCredential = localCredentialRepository.findByUserId(userId)
+        if (localCredential != null) {
+            val raw = password ?: throw BadRequestException("비밀번호를 입력해주세요")
+            val matches = passwordEncoder.matches(raw, localCredential.passwordHash)
+            if (!matches) {
+                throw BadRequestException("비밀번호가 일치하지 않습니다")
+            }
+        }
+
+        // 2) 소셜 연결 해제
         val credentials = socialCredentialRepository.findAllByUserId(userId)
 
         credentials.forEach { credential ->
@@ -140,7 +154,7 @@ class MyPageService(
                     val refreshToken =
                         credential.refreshToken
                             ?: throw BadRequestException(
-                                "구글 계정은 탈퇴를 위해 한 번 더 로그인이 필요합니다. (재로그인 후 다시 시도해주세요)",
+                                "구글 계정은 탈퇴를 위해 한 번 더 로그인이 필요합니다. 재로그인 후 다시 시도해주세요.",
                             )
                     googleOAuthClient.revokeToken(refreshToken)
                 }
