@@ -12,12 +12,15 @@ data class OAuthProperties(
         val clientSecret: String? = null,
         val tokenUri: String,
         val userInfoUri: String,
+        val adminKey: String,
+        val unlinkUri: String,
     )
 
     data class Google(
         val clientId: String,
         val clientSecret: String,
         val tokenUri: String,
+        val revokeUri: String,
         val issuer: String,
         val jwkSetUri: String,
     )

@@ -19,6 +19,45 @@ class GoogleOAuthClient(
 ) {
     private val restTemplate = RestTemplate()
 
+    /**
+     * 구글 token revoke
+     * https://oauth2.googleapis.com/revoke
+     * Content-Type: application/x-www-form-urlencoded
+     * token={refresh_token or access_token}
+     */
+    fun revokeToken(token: String) {
+        val google = props.google
+        if (token.isBlank()) {
+            throw UnauthorizedException("구글 revoke 토큰이 비어있습니다")
+        }
+
+        val headers =
+            HttpHeaders().apply {
+                contentType = MediaType.APPLICATION_FORM_URLENCODED
+                accept = listOf(MediaType.APPLICATION_JSON)
+            }
+
+        val form: MultiValueMap<String, String> =
+            LinkedMultiValueMap<String, String>().apply {
+                add("token", token)
+            }
+
+        val request = HttpEntity(form, headers)
+
+        try {
+            restTemplate.exchange(
+                google.revokeUri,
+                HttpMethod.POST,
+                request,
+                String::class.java,
+            )
+        } catch (e: HttpStatusCodeException) {
+            throw UnauthorizedException("구글 연결 해제에 실패했습니다")
+        } catch (e: Exception) {
+            throw UnauthorizedException("구글 연결 해제에 실패했습니다")
+        }
+    }
+
     fun exchangeCodeForTokenResult(
         code: String,
         redirectUri: String?,
