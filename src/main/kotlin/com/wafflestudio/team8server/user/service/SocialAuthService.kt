@@ -54,7 +54,7 @@ class SocialAuthService(
         // 신규 회원인 경우 User 생성 및 저장
         val user =
             User(
-                nickname = kakaoUserInfo.nickname ?: NicknameGenerator.generateRandomNickname(),
+                nickname = kakaoUserInfo.nickname?.takeIf { it != "kakaouser" } ?: NicknameGenerator.generateRandomNickname(),
                 profileImageUrl = null, // kakaoUserInfo.profileImageUrl,
             )
         val savedUser = userRepository.save(user)
