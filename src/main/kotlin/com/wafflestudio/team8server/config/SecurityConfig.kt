@@ -41,6 +41,7 @@ class SecurityConfig(
                     .requestMatchers(
                         "/api/courses/import",
                         "/api/courses/course-sync/**",
+                        "/api/admin/**",
                     ).hasRole("ADMIN")
                     .requestMatchers(
                         org.springframework.http.HttpMethod.POST,
