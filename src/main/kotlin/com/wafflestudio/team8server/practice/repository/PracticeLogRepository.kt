@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
+import java.time.LocalDateTime
 
 interface PracticeLogRepository : JpaRepository<PracticeLog, Long> {
     fun findByUserIdOrderByPracticeAtDescIdDesc(
@@ -37,4 +38,33 @@ interface PracticeLogRepository : JpaRepository<PracticeLog, Long> {
         """,
     )
     fun findFirstByUserIdWithAttemptsOrderByPracticeAtDesc(userId: Long): PracticeLog?
+
+    @Query(
+        """
+        SELECT CAST(pl.practiceAt AS LocalDate) AS date, COUNT(pd) AS count
+        FROM PracticeDetail pd
+        JOIN pd.practiceLog pl
+        WHERE pl.practiceAt >= :startDateTime AND pl.practiceAt < :endDateTime
+        GROUP BY CAST(pl.practiceAt AS LocalDate)
+        ORDER BY date
+        """,
+    )
+    fun countDailyPracticeAttempts(
+        startDateTime: LocalDateTime,
+        endDateTime: LocalDateTime,
+    ): List<Array<Any>>
+
+    @Query(
+        """
+        SELECT CAST(pl.practiceAt AS LocalDate) AS date, COUNT(DISTINCT pl.user.id) AS count
+        FROM PracticeLog pl
+        WHERE pl.practiceAt >= :startDateTime AND pl.practiceAt < :endDateTime
+        GROUP BY CAST(pl.practiceAt AS LocalDate)
+        ORDER BY date
+        """,
+    )
+    fun countDailyActiveUsers(
+        startDateTime: LocalDateTime,
+        endDateTime: LocalDateTime,
+    ): List<Array<Any>>
 }
