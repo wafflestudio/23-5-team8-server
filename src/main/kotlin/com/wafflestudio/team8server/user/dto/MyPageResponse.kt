@@ -10,15 +10,19 @@ data class MyPageResponse(
     val nickname: String,
     @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.jpg")
     val profileImageUrl: String?,
+    @Schema(description = "비밀번호 변경 가능 여부(로컬 계정 여부)", example = "true")
+    val canChangePassword: Boolean,
 ) {
     companion object {
         fun from(
             user: User,
             resolver: ProfileImageUrlResolver,
+            canChangePassword: Boolean,
         ): MyPageResponse =
             MyPageResponse(
                 nickname = user.nickname,
                 profileImageUrl = resolver.resolve(user.profileImageUrl),
+                canChangePassword = canChangePassword,
             )
     }
 }

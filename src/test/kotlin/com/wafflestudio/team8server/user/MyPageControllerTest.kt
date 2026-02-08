@@ -149,6 +149,7 @@ class MyPageControllerTest
                             .header("Authorization", "Bearer $token"),
                     ).andExpect(status().isOk)
                     .andExpect(jsonPath("$.nickname").value("홍길동"))
+                    .andExpect(jsonPath("$.canChangePassword").value(true))
             }
 
             @Test

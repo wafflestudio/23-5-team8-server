@@ -51,7 +51,10 @@ class MyPageService(
             userRepository
                 .findById(userId)
                 .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
-        return MyPageResponse.from(user, profileImageUrlResolver)
+
+        val canChangePassword = localCredentialRepository.findByUserId(userId) != null
+
+        return MyPageResponse.from(user, profileImageUrlResolver, canChangePassword)
     }
 
     @Transactional
@@ -66,7 +69,9 @@ class MyPageService(
 
         user.nickname = request.nickname
 
-        return MyPageResponse.from(user, profileImageUrlResolver)
+        val canChangePassword = localCredentialRepository.findByUserId(userId) != null
+
+        return MyPageResponse.from(user, profileImageUrlResolver, canChangePassword)
     }
 
     @Transactional
