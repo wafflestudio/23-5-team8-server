@@ -43,7 +43,7 @@ class MyPageController(
 ) {
     @Operation(
         summary = "마이페이지 조회",
-        description = "로그인한 사용자의 닉네임과 프로필 이미지를 조회합니다.",
+        description = "로그인한 사용자의 닉네임, 프로필 이미지, 비밀번호 변경 가능 여부를 조회합니다.",
     )
     @ApiResponses(
         value = [

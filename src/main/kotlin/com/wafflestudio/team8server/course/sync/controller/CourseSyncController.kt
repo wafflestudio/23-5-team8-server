@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDateTime
 
-@Tag(name = "Admin Course Sync", description = "강의 동기화 제어 API (Admin 전용)")
+@Tag(name = "강의 동기화 제어 API", description = "강의 동기화 자동/수동 제어 기능을 제공합니다.")
 @RestController
 @RequestMapping("/api/courses/course-sync")
 class CourseSyncController(
