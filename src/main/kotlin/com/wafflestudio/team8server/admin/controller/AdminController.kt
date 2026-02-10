@@ -2,6 +2,7 @@ package com.wafflestudio.team8server.admin.controller
 
 import com.wafflestudio.team8server.admin.dto.AdminDailyStatsResponse
 import com.wafflestudio.team8server.admin.dto.AdminDbStatsResponse
+import com.wafflestudio.team8server.admin.dto.AdminReactionTimeHistogramResponse
 import com.wafflestudio.team8server.admin.service.AdminService
 import com.wafflestudio.team8server.common.auth.LoggedInUserId
 import com.wafflestudio.team8server.common.exception.BadRequestException
@@ -43,4 +44,13 @@ class AdminController(
         }
         return adminService.getDailyStats(from = from, to = to)
     }
+
+    @Operation(
+        summary = "반응속도 히스토그램 조회",
+        description = "전체 반응속도 데이터를 10ms 구간, 30000ms 상한으로 히스토그램화하여 조회합니다. (관리자 전용)",
+    )
+    @GetMapping("/stats/reaction-times/histogram")
+    fun getReactionTimeHistogram(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+    ): AdminReactionTimeHistogramResponse = adminService.getReactionTimeHistogram()
 }
