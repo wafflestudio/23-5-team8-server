@@ -1,8 +1,10 @@
 package com.wafflestudio.team8server.admin.service
 
+import com.wafflestudio.team8server.admin.dto.AdminDailyCountItem
 import com.wafflestudio.team8server.admin.dto.AdminDailyStatsResponse
 import com.wafflestudio.team8server.admin.dto.AdminDbStatsResponse
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
+import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -12,6 +14,7 @@ import java.time.LocalDate
 class AdminService(
     private val userRepository: UserRepository,
     private val practiceDetailRepository: PracticeDetailRepository,
+    private val practiceLogRepository: PracticeLogRepository,
 ) {
     @Transactional(readOnly = true)
     fun getDbStats(): AdminDbStatsResponse =
@@ -24,10 +27,29 @@ class AdminService(
     fun getDailyStats(
         from: LocalDate,
         to: LocalDate,
-    ): AdminDailyStatsResponse =
-        AdminDailyStatsResponse(
-            dailyActiveUsers = emptyList(),
-            dailyNewUsers = emptyList(),
-            dailyPracticeDetailCounts = emptyList(),
+    ): AdminDailyStatsResponse {
+        val fromAt = from.atStartOfDay()
+        val toExclusive = to.plusDays(1).atStartOfDay()
+
+        val dailyActiveUsers =
+            practiceLogRepository
+                .countDailyActiveUsers(fromAt = fromAt, toExclusive = toExclusive)
+                .map { AdminDailyCountItem(date = it.getDate(), count = it.getCount()) }
+
+        val dailyNewUsers =
+            userRepository
+                .countDailyNewUsers(fromAt = fromAt, toExclusive = toExclusive)
+                .map { AdminDailyCountItem(date = it.getDate(), count = it.getCount()) }
+
+        val dailyPracticeDetailCounts =
+            practiceDetailRepository
+                .countDailyPracticeDetails(fromAt = fromAt, toExclusive = toExclusive)
+                .map { AdminDailyCountItem(date = it.getDate(), count = it.getCount()) }
+
+        return AdminDailyStatsResponse(
+            dailyActiveUsers = dailyActiveUsers,
+            dailyNewUsers = dailyNewUsers,
+            dailyPracticeDetailCounts = dailyPracticeDetailCounts,
         )
+    }
 }
