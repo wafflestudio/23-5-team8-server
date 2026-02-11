@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import kotlin.math.max
 
 /**
  * 개설 강의 정보 엔티티
@@ -90,14 +91,22 @@ enum class Semester {
  * 수강신청 기간 타입에 따른 유효 정원을 계산합니다.
  *
  * - REGULAR(재학생): quota - freshmanQuota
- * - FRESHMAN(신입생): quota - enrolledCount (추후 지원 예정, 현재는 quota 반환)
+ * - FRESHMAN(신입생): quota - registrationCount
  */
 fun Course.getEffectiveQuota(periodType: EnrollmentPeriodType): Int =
     when (periodType) {
-        EnrollmentPeriodType.REGULAR -> quota - (freshmanQuota ?: 0)
-        EnrollmentPeriodType.FRESHMAN -> {
-            // TODO: enrolledCount 컬럼 추가 후 구현
-            // quota - enrolledCount
-            quota
-        }
+        EnrollmentPeriodType.REGULAR -> max(0, quota - (freshmanQuota ?: 0))
+        EnrollmentPeriodType.FRESHMAN -> max(0, quota - (registrationCount ?: 0))
+    }
+
+/**
+ * 수강신청 기간 타입에 따라 프론트로 내려줄 표시용 수강신청인원을 계산합니다.
+ *
+ * - REGULAR(재학생): 항상 0
+ * - FRESHMAN(신입생): registrationCount
+ */
+fun Course.getDisplayedRegistrationCount(periodType: EnrollmentPeriodType): Int =
+    when (periodType) {
+        EnrollmentPeriodType.REGULAR -> 0
+        EnrollmentPeriodType.FRESHMAN -> (registrationCount ?: 0)
     }

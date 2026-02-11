@@ -7,6 +7,7 @@ import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
 import com.wafflestudio.team8server.common.exception.TimeConflictInPreEnrollException
 import com.wafflestudio.team8server.config.EnrollmentPeriodProperties
 import com.wafflestudio.team8server.course.dto.CourseDetailResponse
+import com.wafflestudio.team8server.course.model.getDisplayedRegistrationCount
 import com.wafflestudio.team8server.course.model.getEffectiveQuota
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.preenroll.dto.PreEnrollCourseResponse
@@ -74,7 +75,7 @@ class PreEnrollService(
                             placeAndTime = course.placeAndTime,
                             quota = course.quota,
                             freshmanQuota = course.freshmanQuota,
-                            registrationCount = course.registrationCount,
+                            registrationCount = course.getDisplayedRegistrationCount(enrollmentPeriodProperties.type),
                         ),
                     cartCount = preEnroll.cartCount,
                 )
@@ -147,7 +148,7 @@ class PreEnrollService(
                     placeAndTime = course.placeAndTime,
                     quota = course.quota,
                     freshmanQuota = course.freshmanQuota,
-                    registrationCount = course.registrationCount,
+                    registrationCount = course.getDisplayedRegistrationCount(enrollmentPeriodProperties.type),
                 ),
             cartCount = saved.cartCount,
         )
@@ -200,7 +201,7 @@ class PreEnrollService(
                     placeAndTime = course.placeAndTime,
                     quota = course.quota,
                     freshmanQuota = course.freshmanQuota,
-                    registrationCount = course.registrationCount,
+                    registrationCount = course.getDisplayedRegistrationCount(enrollmentPeriodProperties.type),
                 ),
             cartCount = saved.cartCount,
         )
