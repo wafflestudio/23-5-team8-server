@@ -1,11 +1,13 @@
 package com.wafflestudio.team8server.course.service
 
 import com.wafflestudio.team8server.common.dto.PageInfo
+import com.wafflestudio.team8server.config.EnrollmentPeriodProperties
 import com.wafflestudio.team8server.course.dto.CourseDetailResponse
 import com.wafflestudio.team8server.course.dto.CourseSearchRequest
 import com.wafflestudio.team8server.course.dto.CourseSearchResponse
 import com.wafflestudio.team8server.course.model.Course
 import com.wafflestudio.team8server.course.model.Semester
+import com.wafflestudio.team8server.course.model.getDisplayedRegistrationCount
 import com.wafflestudio.team8server.course.model.withId
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.course.repository.CourseSpecification
@@ -26,6 +28,7 @@ class CourseService(
     private val entityManager: EntityManager,
     @Value("\${course.import.batch-size:500}")
     private val courseImportBatchSize: Int,
+    private val enrollmentPeriodProperties: EnrollmentPeriodProperties,
 ) {
     private val log = LoggerFactory.getLogger(CourseExcelParser::class.java)
 
@@ -50,6 +53,8 @@ class CourseService(
 
         val page = courseRepository.findAll(specification, pageable)
 
+        val periodType = enrollmentPeriodProperties.type
+
         val items =
             page.content.map { course ->
                 CourseDetailResponse(
@@ -69,7 +74,7 @@ class CourseService(
                     placeAndTime = course.placeAndTime,
                     quota = course.quota,
                     freshmanQuota = course.freshmanQuota,
-                    registrationCount = course.registrationCount,
+                    registrationCount = course.getDisplayedRegistrationCount(periodType),
                 )
             }
 

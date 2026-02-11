@@ -10,6 +10,7 @@ import com.wafflestudio.team8server.common.extension.ensureNotNull
 import com.wafflestudio.team8server.common.time.TimeProvider
 import com.wafflestudio.team8server.config.EnrollmentPeriodProperties
 import com.wafflestudio.team8server.course.dto.CourseDetailResponse
+import com.wafflestudio.team8server.course.model.getDisplayedRegistrationCount
 import com.wafflestudio.team8server.course.model.getEffectiveQuota
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.leaderboard.service.LeaderboardService
@@ -398,7 +399,7 @@ class PracticeService(
                     placeAndTime = course.placeAndTime,
                     quota = course.quota,
                     freshmanQuota = course.freshmanQuota,
-                    registrationCount = course.registrationCount,
+                    registrationCount = course.getDisplayedRegistrationCount(enrollmentPeriodProperties.type),
                 )
             }
     }
