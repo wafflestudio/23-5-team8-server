@@ -71,8 +71,8 @@ class ReactionTimePercentileService(
             when {
                 competitionRatio < 1.5 -> {
                     // 경쟁률 1.0 ~ 1.5: 보정 적용
-                    // 1.0 → exponent 3.0, 1.5 → exponent 1.0
-                    7.0 - 4.0 * competitionRatio
+                    // 1.0 → exponent 5.0, 1.5 → exponent 1.0
+                    13.0 - 8.0 * competitionRatio
                 }
                 else -> {
                     // 경쟁률 1.5 이상: 보정 없음
