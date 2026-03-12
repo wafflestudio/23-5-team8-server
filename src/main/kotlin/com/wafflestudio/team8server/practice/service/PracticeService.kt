@@ -241,11 +241,7 @@ class PracticeService(
         }
 
         // 10. 백분위(Percentile) 계산 (DB 기반)
-        val rawPercentile = reactionTimePercentileService.calculatePercentile(userLatencyMs)
-
-        // 10-1. 경쟁률에 따른 백분위 조정
-        val competitionRatio = totalCompetitors.toDouble() / capacity
-        val percentile = reactionTimePercentileService.adjustPercentileByCompetition(rawPercentile, competitionRatio)
+        val percentile = reactionTimePercentileService.calculatePercentile(userLatencyMs)
 
         // 11. 등수(Rank) 산출
         val rank = reactionTimePercentileService.calculateRank(percentile, totalCompetitors)
