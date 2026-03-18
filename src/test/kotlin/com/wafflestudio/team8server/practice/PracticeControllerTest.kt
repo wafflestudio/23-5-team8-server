@@ -346,17 +346,13 @@ class PracticeControllerTest
         }
 
         /**
-         * 수동 테스트 전용:
-         * Redis TTL은 시스템 시간 기반이므로 MockTimeProvider로 테스트할 수 없습니다.
-         *
-         * 수동 테스트 방법:
-         * 1. @Disabled 어노테이션 제거
-         * 2. application-test.yml의 practice.session.time-limit-seconds를 6으로 변경
-         * 3. 테스트 실행하면 7초 대기 후 세션이 만료되어 400 에러 발생하는지 확인
+         * 이 테스트는 PracticeSessionTTLTest로 이동되었습니다.
+         * @TestPropertySource로 TTL을 3초로 설정하여 자동화 테스트로 전환됨.
+         * @see com.wafflestudio.team8server.practice.PracticeSessionTTLTest
          */
         @Test
-        @Disabled("Redis TTL은 시스템 시간 기반이므로 MockTimeProvider로 테스트할 수 없습니다. 수동 테스트 필요.")
-        @DisplayName("연습 시간 초과 시 400 반환 (Redis TTL 만료로 세션 없음) - 수동 테스트")
+        @Disabled("PracticeSessionTTLTest로 이동됨 - 짧은 TTL 설정으로 자동화 완료")
+        @DisplayName("연습 시간 초과 시 400 반환 (Redis TTL 만료로 세션 없음) - PracticeSessionTTLTest 참조")
         fun `attempt practice after time limit returns 400`() {
             val token = signupAndGetToken()
 
@@ -1026,20 +1022,13 @@ class PracticeControllerTest
         }
 
         /**
-         * 수동 테스트 전용:
-         * 세션 TTL 만료 시 Redis Keyspace Notification을 통해 리더보드가 자동 갱신되는지 확인합니다.
-         *
-         * 수동 테스트 방법:
-         * 1. @Disabled 어노테이션 제거
-         * 2. application-test.yml의 practice.session.time-limit-seconds를 6으로 변경
-         * 3. Redis 서버에서 notify-keyspace-events 설정이 "Ex"인지 확인
-         *    - redis-cli로 접속 후: CONFIG GET notify-keyspace-events
-         *    - 설정 안 되어 있으면: CONFIG SET notify-keyspace-events Ex
-         * 4. 테스트 실행하면 7초 대기 후 리더보드가 갱신되었는지 확인
+         * 이 테스트는 PracticeSessionTTLTest로 이동되었습니다.
+         * @TestPropertySource로 TTL을 3초로 설정하여 자동화 테스트로 전환됨.
+         * @see com.wafflestudio.team8server.practice.PracticeSessionTTLTest
          */
         @Test
-        @Disabled("Redis TTL 만료 및 Keyspace Notification 테스트. 수동 테스트 필요.")
-        @DisplayName("세션 TTL 만료 시 리더보드 자동 갱신 - 수동 테스트")
+        @Disabled("PracticeSessionTTLTest로 이동됨 - 짧은 TTL 설정으로 자동화 완료")
+        @DisplayName("세션 TTL 만료 시 리더보드 자동 갱신 - PracticeSessionTTLTest 참조")
         fun `leaderboard is updated when session expires by TTL`() {
             val token = signupAndGetToken()
 
