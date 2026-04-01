@@ -19,6 +19,23 @@ java {
 
 repositories {
     mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/wafflestudio/spring-waffle")
+        credentials {
+            username = "wafflestudio"
+            password = findProperty("gpr.key") as String? // 1. gradle.properties에 설정한 값
+                ?: System.getenv("GITHUB_TOKEN") // 2. 환경변수 (CI에서 자동 제공)
+                ?: runCatching {
+                    // 3. gh CLI에서 가져오기 (로컬)
+                    ProcessBuilder("gh", "auth", "token")
+                        .start()
+                        .inputStream
+                        .bufferedReader()
+                        .readText()
+                        .trim()
+                }.getOrDefault("")
+        }
+    }
 }
 
 dependencies {
@@ -58,9 +75,8 @@ dependencies {
     implementation("org.apache.poi:poi-ooxml:5.2.5")
     implementation("com.github.pjfanning:excel-streaming-reader:4.2.1")
 
-    // AWS SDK v2 for S3
-    implementation(platform("software.amazon.awssdk:bom:2.25.0"))
-    implementation("software.amazon.awssdk:s3")
+    // OCI Vault (spring-waffle)
+    implementation("com.wafflestudio.spring:spring-boot-starter-waffle-oci-vault:1.1.0")
 }
 
 configurations.all {
