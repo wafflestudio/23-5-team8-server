@@ -190,4 +190,367 @@ class CourseControllerTest
                 .andExpect(jsonPath("$.items.length()").value(1))
                 .andExpect(jsonPath("$.pageInfo").exists())
         }
+
+        @Test
+        @DisplayName("학과(department) 필터로 검색")
+        fun `search courses by department filter`() {
+            courseRepository.saveAll(
+                listOf(
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "전선",
+                        college = "공과대학",
+                        department = "컴퓨터공학부",
+                        academicCourse = "학부",
+                        academicYear = "3",
+                        courseNumber = "4190.310",
+                        lectureNumber = "001",
+                        courseTitle = "자료구조",
+                        credit = 3,
+                        instructor = "홍길동",
+                        placeAndTime = null,
+                        quota = 80,
+                        freshmanQuota = null,
+                    ),
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "전선",
+                        college = "공과대학",
+                        department = "전기·정보공학부",
+                        academicCourse = "학부",
+                        academicYear = "3",
+                        courseNumber = "430.322",
+                        lectureNumber = "001",
+                        courseTitle = "컴퓨터조직론",
+                        credit = 3,
+                        instructor = "김장우",
+                        placeAndTime = null,
+                        quota = 100,
+                        freshmanQuota = null,
+                    ),
+                ),
+            )
+
+            mockMvc
+                .perform(
+                    get("/api/courses/search")
+                        .queryParam("department", "컴퓨터공학부"),
+                ).andDo(print())
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].courseTitle").value("자료구조"))
+        }
+
+        @Test
+        @DisplayName("개설대학(college) 필터로 검색")
+        fun `search courses by college filter`() {
+            courseRepository.saveAll(
+                listOf(
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "전선",
+                        college = "공과대학",
+                        department = "컴퓨터공학부",
+                        academicCourse = "학부",
+                        academicYear = "3",
+                        courseNumber = "4190.310",
+                        lectureNumber = "001",
+                        courseTitle = "자료구조",
+                        credit = 3,
+                        instructor = "홍길동",
+                        placeAndTime = null,
+                        quota = 80,
+                        freshmanQuota = null,
+                    ),
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "교양",
+                        college = "자연과학대학",
+                        department = "생명과학부",
+                        academicCourse = "학부",
+                        academicYear = "1",
+                        courseNumber = "F35.103L",
+                        lectureNumber = "001",
+                        courseTitle = "생물학실험",
+                        credit = 1,
+                        instructor = null,
+                        placeAndTime = null,
+                        quota = 20,
+                        freshmanQuota = 14,
+                    ),
+                ),
+            )
+
+            mockMvc
+                .perform(
+                    get("/api/courses/search")
+                        .queryParam("college", "자연과학대학"),
+                ).andDo(print())
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].courseTitle").value("생물학실험"))
+        }
+
+        @Test
+        @DisplayName("교과구분(classification) 필터로 검색")
+        fun `search courses by classification filter`() {
+            courseRepository.saveAll(
+                listOf(
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "전필",
+                        college = "공과대학",
+                        department = "컴퓨터공학부",
+                        academicCourse = "학부",
+                        academicYear = "2",
+                        courseNumber = "4190.200",
+                        lectureNumber = "001",
+                        courseTitle = "프로그래밍 원리",
+                        credit = 3,
+                        instructor = "이교수",
+                        placeAndTime = null,
+                        quota = 60,
+                        freshmanQuota = null,
+                    ),
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "전선",
+                        college = "공과대학",
+                        department = "컴퓨터공학부",
+                        academicCourse = "학부",
+                        academicYear = "3",
+                        courseNumber = "4190.310",
+                        lectureNumber = "001",
+                        courseTitle = "자료구조",
+                        credit = 3,
+                        instructor = "홍길동",
+                        placeAndTime = null,
+                        quota = 80,
+                        freshmanQuota = null,
+                    ),
+                ),
+            )
+
+            mockMvc
+                .perform(
+                    get("/api/courses/search")
+                        .queryParam("classification", "전필"),
+                ).andDo(print())
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].courseTitle").value("프로그래밍 원리"))
+        }
+
+        @Test
+        @DisplayName("검색 결과가 없을 때 빈 배열 반환")
+        fun `search courses with no results returns empty`() {
+            mockMvc
+                .perform(
+                    get("/api/courses/search")
+                        .queryParam("query", "존재하지않는강의"),
+                ).andDo(print())
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.items").isArray)
+                .andExpect(jsonPath("$.items.length()").value(0))
+                .andExpect(jsonPath("$.pageInfo.totalElements").value(0))
+                .andExpect(jsonPath("$.pageInfo.totalPages").value(0))
+                .andExpect(jsonPath("$.pageInfo.hasNext").value(false))
+        }
+
+        @Test
+        @DisplayName("query와 필터를 동시에 적용")
+        fun `search courses with query and filter combined`() {
+            courseRepository.saveAll(
+                listOf(
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "전선",
+                        college = "공과대학",
+                        department = "컴퓨터공학부",
+                        academicCourse = "학부",
+                        academicYear = "3",
+                        courseNumber = "4190.310",
+                        lectureNumber = "001",
+                        courseTitle = "자료구조",
+                        credit = 3,
+                        instructor = "홍길동",
+                        placeAndTime = null,
+                        quota = 80,
+                        freshmanQuota = null,
+                    ),
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "전선",
+                        college = "공과대학",
+                        department = "전기·정보공학부",
+                        academicCourse = "학부",
+                        academicYear = "3",
+                        courseNumber = "430.310",
+                        lectureNumber = "001",
+                        courseTitle = "자료구조 응용",
+                        credit = 3,
+                        instructor = "김교수",
+                        placeAndTime = null,
+                        quota = 50,
+                        freshmanQuota = null,
+                    ),
+                ),
+            )
+
+            mockMvc
+                .perform(
+                    get("/api/courses/search")
+                        .queryParam("query", "자료구조")
+                        .queryParam("department", "컴퓨터공학부"),
+                ).andDo(print())
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].courseTitle").value("자료구조"))
+        }
+
+        @Test
+        @DisplayName("학년(academicYear) 필터로 검색")
+        fun `search courses by academic year filter`() {
+            courseRepository.saveAll(
+                listOf(
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "전선",
+                        college = "공과대학",
+                        department = "컴퓨터공학부",
+                        academicCourse = "학부",
+                        academicYear = "3",
+                        courseNumber = "4190.310",
+                        lectureNumber = "001",
+                        courseTitle = "자료구조",
+                        credit = 3,
+                        instructor = "홍길동",
+                        placeAndTime = null,
+                        quota = 80,
+                        freshmanQuota = null,
+                    ),
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "전필",
+                        college = "공과대학",
+                        department = "컴퓨터공학부",
+                        academicCourse = "학부",
+                        academicYear = "1",
+                        courseNumber = "4190.100",
+                        lectureNumber = "001",
+                        courseTitle = "컴퓨터프로그래밍",
+                        credit = 3,
+                        instructor = "박교수",
+                        placeAndTime = null,
+                        quota = 120,
+                        freshmanQuota = null,
+                    ),
+                ),
+            )
+
+            mockMvc
+                .perform(
+                    get("/api/courses/search")
+                        .queryParam("academicYear", "1"),
+                ).andDo(print())
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].courseTitle").value("컴퓨터프로그래밍"))
+        }
+
+        @Test
+        @DisplayName("페이지네이션 pageInfo 정확성 검증")
+        fun `search courses pagination pageInfo is accurate`() {
+            courseRepository.saveAll(
+                (1..5).map { idx ->
+                    Course(
+                        year = 2026,
+                        semester = Semester.SPRING,
+                        classification = "전선",
+                        college = "공과대학",
+                        department = "컴퓨터공학부",
+                        academicCourse = "학부",
+                        academicYear = "3",
+                        courseNumber = "4190.30$idx",
+                        lectureNumber = "001",
+                        courseTitle = "과목$idx",
+                        credit = 3,
+                        instructor = "교수$idx",
+                        placeAndTime = null,
+                        quota = 50,
+                        freshmanQuota = null,
+                    )
+                },
+            )
+
+            // 첫 페이지
+            mockMvc
+                .perform(
+                    get("/api/courses/search")
+                        .queryParam("department", "컴퓨터공학부")
+                        .queryParam("page", "0")
+                        .queryParam("size", "2"),
+                ).andDo(print())
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.items.length()").value(2))
+                .andExpect(jsonPath("$.pageInfo.page").value(0))
+                .andExpect(jsonPath("$.pageInfo.size").value(2))
+                .andExpect(jsonPath("$.pageInfo.totalElements").value(5))
+                .andExpect(jsonPath("$.pageInfo.totalPages").value(3))
+                .andExpect(jsonPath("$.pageInfo.hasNext").value(true))
+
+            // 마지막 페이지
+            mockMvc
+                .perform(
+                    get("/api/courses/search")
+                        .queryParam("department", "컴퓨터공학부")
+                        .queryParam("page", "2")
+                        .queryParam("size", "2"),
+                ).andExpect(status().isOk)
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.pageInfo.hasNext").value(false))
+        }
+
+        @Test
+        @DisplayName("공백 포함 검색어로 검색 시 공백 제거 후 매칭")
+        fun `search courses with spaces in query matches without spaces`() {
+            courseRepository.save(
+                Course(
+                    year = 2026,
+                    semester = Semester.SPRING,
+                    classification = "전선",
+                    college = "공과대학",
+                    department = "컴퓨터공학부",
+                    academicCourse = "학부",
+                    academicYear = "3",
+                    courseNumber = "4190.310",
+                    lectureNumber = "001",
+                    courseTitle = "자료 구조",
+                    credit = 3,
+                    instructor = "홍길동",
+                    placeAndTime = null,
+                    quota = 80,
+                    freshmanQuota = null,
+                ),
+            )
+
+            mockMvc
+                .perform(
+                    get("/api/courses/search")
+                        .queryParam("query", "자료구조"),
+                ).andDo(print())
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].courseTitle").value("자료 구조"))
+        }
     }
