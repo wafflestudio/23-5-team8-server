@@ -26,7 +26,7 @@ oci:
   vault:
     secret-ids: "ocid1.vaultsecret...prod용..."  # TODO: 실제 OCID로 교체
   storage:
-    namespace: # TODO
+    namespace: ax1dvc8vmenm
     region: ap-chuncheon-1
     bucket: snuclear-asset
 
