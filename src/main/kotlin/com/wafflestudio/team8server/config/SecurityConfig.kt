@@ -86,7 +86,12 @@ class SecurityConfig(
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
         configuration.allowedOrigins =
-            listOf("https://d2h9nh4wy5xpy5.cloudfront.net", "http://localhost:3000", "http://localhost:5173", "https://allclear.codes")
+            listOf(
+                "https://snuclear.wafflestudio.com",
+                "https://snuclear-dev.wafflestudio.com",
+                "http://localhost:3000",
+                "http://localhost:5173",
+            )
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
         configuration.allowCredentials = true
