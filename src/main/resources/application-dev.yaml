@@ -1,7 +1,7 @@
 spring:
   config:
     activate:
-      on-profile: prod
+      on-profile: dev
   datasource:
     url:        # Vault가 주입
     username:
@@ -24,11 +24,11 @@ server:
 
 oci:
   vault:
-    secret-ids: "ocid1.vaultsecret...prod용..."  # TODO: 실제 OCID로 교체
+    secret-ids: "ocid1.vaultsecret...dev용..."   # TODO: 실제 OCID로 교체
   storage:
     namespace: # TODO
     region: ap-chuncheon-1
-    bucket: snuclear-asset
+    bucket: snuclear-asset-dev
 
 course-sync:
   auto:
