@@ -14,6 +14,14 @@ spring:
       max-file-size: 20MB
       max-request-size: 20MB
 
+management:
+  endpoints:
+    web:
+      base-path: /api/v1
+  endpoint:
+    health:
+      enabled: true
+
 # 수강신청 기간 설정
 enrollment-period:
   type: REGULAR  # REGULAR(재학생) / FRESHMAN(신입생)

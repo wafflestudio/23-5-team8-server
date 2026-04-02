@@ -64,6 +64,7 @@ class SecurityConfig(
                         "/api/courses/search",
                         "/api/leaderboard",
                         "/api/leaderboard/weekly",
+                        "/api/v1/health",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/swagger-ui.html",
