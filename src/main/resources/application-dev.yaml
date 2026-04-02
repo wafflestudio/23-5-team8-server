@@ -11,8 +11,8 @@ spring:
       ddl-auto: validate
   data:
     redis:
-      host:     # Vault가 주입
-      port:
+      host: snuclear-valkey
+      port: 6379
       password:
 
 jwt:
@@ -24,7 +24,7 @@ server:
 
 oci:
   vault:
-    secret-ids: "ocid1.vaultsecret...dev용..."   # TODO: 실제 OCID로 교체
+    secret-ids: "ocid1.vaultsecret.oc1.ap-chuncheon-1.amaaaaaat2m5lbqano5ocm3fee2ktmqz6wfyp45qegophj2gzmmwlpesejua"
   storage:
     namespace: ax1dvc8vmenm
     region: ap-chuncheon-1
