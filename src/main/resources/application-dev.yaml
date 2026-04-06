@@ -1,7 +1,7 @@
 spring:
   config:
     activate:
-      on-profile: prod
+      on-profile: dev
   datasource:
     url:        # Vault가 주입
     username:
@@ -24,11 +24,11 @@ server:
 
 oci:
   vault:
-    secret-ids: "ocid1.vaultsecret.oc1.ap-chuncheon-1.amaaaaaat2m5lbqacc7fwpbm5vj2pqx27ljafd7gzaim3mwsmtao57hlokdq"
+    secret-ids: "ocid1.vaultsecret.oc1.ap-chuncheon-1.amaaaaaat2m5lbqano5ocm3fee2ktmqz6wfyp45qegophj2gzmmwlpesejua"
   storage:
     namespace: ax1dvc8vmenm
     region: ap-chuncheon-1
-    bucket: snuclear-asset
+    bucket: snuclear-asset-dev
 
 course-sync:
   auto:

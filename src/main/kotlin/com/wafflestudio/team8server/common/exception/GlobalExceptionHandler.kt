@@ -188,8 +188,8 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response)
     }
 
-    @ExceptionHandler(S3NotConfiguredException::class)
-    fun handleS3NotConfiguredException(e: S3NotConfiguredException): ResponseEntity<ErrorResponse> {
+    @ExceptionHandler(ObjectStorageNotConfiguredException::class)
+    fun handleObjectStorageNotConfiguredException(e: ObjectStorageNotConfiguredException): ResponseEntity<ErrorResponse> {
         val response =
             ErrorResponse(
                 status = HttpStatus.SERVICE_UNAVAILABLE.value(), // 503
