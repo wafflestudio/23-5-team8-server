@@ -331,7 +331,7 @@ class MyPageController(
     @Operation(
         summary = "프로필 이미지 업로드용 Presigned URL 생성",
         description =
-            "S3에 프로필 이미지를 업로드하기 위한 Presigned URL을 생성합니다. " +
+            "Object Storage에 프로필 이미지를 업로드하기 위한 Presigned URL을 생성합니다. " +
                 "반환된 URL로 PUT 요청을 보내 이미지를 업로드할 수 있습니다.",
     )
     @ApiResponses(
@@ -385,8 +385,8 @@ class MyPageController(
     @Operation(
         summary = "프로필 이미지 URL 저장",
         description =
-            "S3에 업로드 완료된 이미지의 URL을 DB에 저장합니다. " +
-                "기존 프로필 이미지가 있으면 S3에서 삭제됩니다.",
+            "Object Storage에 업로드 완료된 이미지의 URL을 DB에 저장합니다. " +
+                "기존 프로필 이미지가 있으면 Object Storage에서 삭제됩니다.",
     )
     @ApiResponses(
         value = [
@@ -442,7 +442,7 @@ class MyPageController(
 
     @Operation(
         summary = "프로필 이미지 삭제",
-        description = "프로필 이미지를 삭제합니다. S3에서 이미지가 삭제되고 DB에서 URL이 제거됩니다.",
+        description = "프로필 이미지를 삭제합니다. Object Storage에서 이미지가 삭제되고 DB에서 URL이 제거됩니다.",
     )
     @ApiResponses(
         value = [

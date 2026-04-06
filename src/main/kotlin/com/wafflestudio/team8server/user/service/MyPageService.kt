@@ -2,8 +2,8 @@ package com.wafflestudio.team8server.user.service
 
 import com.wafflestudio.team8server.common.dto.PageInfo
 import com.wafflestudio.team8server.common.exception.BadRequestException
+import com.wafflestudio.team8server.common.exception.ObjectStorageNotConfiguredException
 import com.wafflestudio.team8server.common.exception.ResourceNotFoundException
-import com.wafflestudio.team8server.common.exception.S3NotConfiguredException
 import com.wafflestudio.team8server.common.exception.UnauthorizedException
 import com.wafflestudio.team8server.common.extension.ensureNotNull
 import com.wafflestudio.team8server.practice.dto.PracticeAttemptResult
@@ -43,7 +43,7 @@ class MyPageService(
     private val kakaoOAuthClient: KakaoOAuthClient,
     private val googleOAuthClient: GoogleOAuthClient,
     @Autowired(required = false)
-    private val s3Service: S3Service?,
+    private val objectStorageService: ObjectStorageService?,
 ) {
     @Transactional(readOnly = true)
     fun getMyPage(userId: Long): MyPageResponse {
@@ -217,7 +217,7 @@ class MyPageService(
         userId: Long,
         request: PresignedUrlRequest,
     ): PresignedUrlResponse {
-        val service = s3Service ?: throw S3NotConfiguredException()
+        val service = objectStorageService ?: throw ObjectStorageNotConfiguredException()
         val result =
             service.generatePresignedUrl(
                 userId = userId,
@@ -235,13 +235,13 @@ class MyPageService(
         userId: Long,
         request: UpdateProfileImageRequest,
     ) {
-        val service = s3Service ?: throw S3NotConfiguredException()
+        val service = objectStorageService ?: throw ObjectStorageNotConfiguredException()
         val user =
             userRepository
                 .findById(userId)
                 .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
 
-        // 기존 이미지가 S3 key인 경우만 삭제 (소셜 로그인 URL은 무시)
+        // 기존 이미지가 Object Storage key인 경우만 삭제 (소셜 로그인 URL은 무시)
         user.profileImageUrl?.let { existing ->
             if (!existing.startsWith("http://") && !existing.startsWith("https://")) {
                 service.deleteObject(existing)
@@ -255,13 +255,13 @@ class MyPageService(
 
     @Transactional
     fun deleteProfileImage(userId: Long) {
-        val service = s3Service ?: throw S3NotConfiguredException()
+        val service = objectStorageService ?: throw ObjectStorageNotConfiguredException()
         val user =
             userRepository
                 .findById(userId)
                 .orElseThrow { ResourceNotFoundException("사용자를 찾을 수 없습니다") }
 
-        // 기존 이미지가 S3 key인 경우만 삭제 (소셜 로그인 URL은 무시)
+        // 기존 이미지가 Object Storage key인 경우만 삭제 (소셜 로그인 URL은 무시)
         user.profileImageUrl?.let { existing ->
             if (!existing.startsWith("http://") && !existing.startsWith("https://")) {
                 service.deleteObject(existing)

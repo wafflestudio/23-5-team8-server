@@ -1,0 +1,14 @@
+name: Deploy-prod
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      ocir_repository: snuclear-prod/snuclear-server
+      dockerfile: Dockerfile
+    secrets:
+      OCI_AUTH_TOKEN: ${{ secrets.OCI_AUTH_TOKEN }}
