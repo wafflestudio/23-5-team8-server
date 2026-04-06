@@ -4,6 +4,8 @@ import com.wafflestudio.team8server.admin.dto.AdminDailyCountItem
 import com.wafflestudio.team8server.admin.dto.AdminDailyStatsResponse
 import com.wafflestudio.team8server.admin.dto.AdminDbStatsResponse
 import com.wafflestudio.team8server.admin.dto.AdminReactionTimeHistogramResponse
+import com.wafflestudio.team8server.admin.dto.ReactionTimeByAttributeItem
+import com.wafflestudio.team8server.admin.dto.ReactionTimeByCourseNumberItem
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
 import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
@@ -59,6 +61,98 @@ class AdminService(
         private const val MAX_MS = 30000
         private const val BIN_COUNT = MAX_MS / BIN_SIZE_MS // 3000
     }
+
+    @Transactional(readOnly = true)
+    fun getReactionTimeByClassification(): List<ReactionTimeByAttributeItem> =
+        practiceDetailRepository.groupReactionTimeByClassification().map {
+            ReactionTimeByAttributeItem(
+                attribute = it.getAttribute(),
+                count = it.getCount(),
+                avgReactionTime = it.getAvgReactionTime(),
+                minReactionTime = it.getMinReactionTime(),
+                maxReactionTime = it.getMaxReactionTime(),
+                successCount = it.getSuccessCount(),
+            )
+        }
+
+    @Transactional(readOnly = true)
+    fun getReactionTimeByCollege(): List<ReactionTimeByAttributeItem> =
+        practiceDetailRepository.groupReactionTimeByCollege().map {
+            ReactionTimeByAttributeItem(
+                attribute = it.getAttribute(),
+                count = it.getCount(),
+                avgReactionTime = it.getAvgReactionTime(),
+                minReactionTime = it.getMinReactionTime(),
+                maxReactionTime = it.getMaxReactionTime(),
+                successCount = it.getSuccessCount(),
+            )
+        }
+
+    @Transactional(readOnly = true)
+    fun getReactionTimeByDepartment(): List<ReactionTimeByAttributeItem> =
+        practiceDetailRepository.groupReactionTimeByDepartment().map {
+            ReactionTimeByAttributeItem(
+                attribute = it.getAttribute(),
+                count = it.getCount(),
+                avgReactionTime = it.getAvgReactionTime(),
+                minReactionTime = it.getMinReactionTime(),
+                maxReactionTime = it.getMaxReactionTime(),
+                successCount = it.getSuccessCount(),
+            )
+        }
+
+    @Transactional(readOnly = true)
+    fun getReactionTimeByAcademicCourse(): List<ReactionTimeByAttributeItem> =
+        practiceDetailRepository.groupReactionTimeByAcademicCourse().map {
+            ReactionTimeByAttributeItem(
+                attribute = it.getAttribute(),
+                count = it.getCount(),
+                avgReactionTime = it.getAvgReactionTime(),
+                minReactionTime = it.getMinReactionTime(),
+                maxReactionTime = it.getMaxReactionTime(),
+                successCount = it.getSuccessCount(),
+            )
+        }
+
+    @Transactional(readOnly = true)
+    fun getReactionTimeByAcademicYear(): List<ReactionTimeByAttributeItem> =
+        practiceDetailRepository.groupReactionTimeByAcademicYear().map {
+            ReactionTimeByAttributeItem(
+                attribute = it.getAttribute(),
+                count = it.getCount(),
+                avgReactionTime = it.getAvgReactionTime(),
+                minReactionTime = it.getMinReactionTime(),
+                maxReactionTime = it.getMaxReactionTime(),
+                successCount = it.getSuccessCount(),
+            )
+        }
+
+    @Transactional(readOnly = true)
+    fun getReactionTimeByCredit(): List<ReactionTimeByAttributeItem> =
+        practiceDetailRepository.groupReactionTimeByCredit().map {
+            ReactionTimeByAttributeItem(
+                attribute = it.getAttribute(),
+                count = it.getCount(),
+                avgReactionTime = it.getAvgReactionTime(),
+                minReactionTime = it.getMinReactionTime(),
+                maxReactionTime = it.getMaxReactionTime(),
+                successCount = it.getSuccessCount(),
+            )
+        }
+
+    @Transactional(readOnly = true)
+    fun getReactionTimeByCourseNumber(): List<ReactionTimeByCourseNumberItem> =
+        practiceDetailRepository.groupReactionTimeByCourseNumber().map {
+            ReactionTimeByCourseNumberItem(
+                attribute = it.getAttribute(),
+                courseName = it.getCourseName(),
+                count = it.getCount(),
+                avgReactionTime = it.getAvgReactionTime(),
+                minReactionTime = it.getMinReactionTime(),
+                maxReactionTime = it.getMaxReactionTime(),
+                successCount = it.getSuccessCount(),
+            )
+        }
 
     @Transactional(readOnly = true)
     fun getReactionTimeHistogram(): AdminReactionTimeHistogramResponse {
