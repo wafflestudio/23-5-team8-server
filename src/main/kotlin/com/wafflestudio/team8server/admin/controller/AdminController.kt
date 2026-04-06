@@ -3,6 +3,8 @@ package com.wafflestudio.team8server.admin.controller
 import com.wafflestudio.team8server.admin.dto.AdminDailyStatsResponse
 import com.wafflestudio.team8server.admin.dto.AdminDbStatsResponse
 import com.wafflestudio.team8server.admin.dto.AdminReactionTimeHistogramResponse
+import com.wafflestudio.team8server.admin.dto.ReactionTimeByAttributeItem
+import com.wafflestudio.team8server.admin.dto.ReactionTimeByCourseNumberItem
 import com.wafflestudio.team8server.admin.service.AdminService
 import com.wafflestudio.team8server.common.auth.LoggedInUserId
 import com.wafflestudio.team8server.common.exception.BadRequestException
@@ -53,4 +55,46 @@ class AdminController(
     fun getReactionTimeHistogram(
         @Parameter(hidden = true) @LoggedInUserId userId: Long,
     ): AdminReactionTimeHistogramResponse = adminService.getReactionTimeHistogram()
+
+    @Operation(summary = "이수구분별 반응속도 통계 조회", description = "이수구분(전공필수, 전공선택, 교양 등)별 반응속도 통계를 조회합니다. (관리자 전용)")
+    @GetMapping("/stats/reaction-times/by-classification")
+    fun getReactionTimeByClassification(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+    ): List<ReactionTimeByAttributeItem> = adminService.getReactionTimeByClassification()
+
+    @Operation(summary = "단과대학별 반응속도 통계 조회", description = "단과대학별 반응속도 통계를 조회합니다. (관리자 전용)")
+    @GetMapping("/stats/reaction-times/by-college")
+    fun getReactionTimeByCollege(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+    ): List<ReactionTimeByAttributeItem> = adminService.getReactionTimeByCollege()
+
+    @Operation(summary = "학과별 반응속도 통계 조회", description = "학과별 반응속도 통계를 조회합니다. (관리자 전용)")
+    @GetMapping("/stats/reaction-times/by-department")
+    fun getReactionTimeByDepartment(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+    ): List<ReactionTimeByAttributeItem> = adminService.getReactionTimeByDepartment()
+
+    @Operation(summary = "과정별 반응속도 통계 조회", description = "과정(학사, 석사, 박사 등)별 반응속도 통계를 조회합니다. (관리자 전용)")
+    @GetMapping("/stats/reaction-times/by-academic-course")
+    fun getReactionTimeByAcademicCourse(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+    ): List<ReactionTimeByAttributeItem> = adminService.getReactionTimeByAcademicCourse()
+
+    @Operation(summary = "학년별 반응속도 통계 조회", description = "학년별 반응속도 통계를 조회합니다. (관리자 전용)")
+    @GetMapping("/stats/reaction-times/by-academic-year")
+    fun getReactionTimeByAcademicYear(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+    ): List<ReactionTimeByAttributeItem> = adminService.getReactionTimeByAcademicYear()
+
+    @Operation(summary = "학점별 반응속도 통계 조회", description = "학점별 반응속도 통계를 조회합니다. (관리자 전용)")
+    @GetMapping("/stats/reaction-times/by-credit")
+    fun getReactionTimeByCredit(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+    ): List<ReactionTimeByAttributeItem> = adminService.getReactionTimeByCredit()
+
+    @Operation(summary = "교과목번호별 반응속도 통계 조회", description = "교과목번호별 반응속도 통계를 조회합니다. (관리자 전용)")
+    @GetMapping("/stats/reaction-times/by-course-number")
+    fun getReactionTimeByCourseNumber(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+    ): List<ReactionTimeByCourseNumberItem> = adminService.getReactionTimeByCourseNumber()
 }
