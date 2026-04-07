@@ -10,6 +10,7 @@ import com.wafflestudio.team8server.common.auth.LoggedInUserId
 import com.wafflestudio.team8server.common.exception.BadRequestException
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.web.bind.annotation.GetMapping
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDate
 
 @Tag(name = "Admin", description = "관리자 API")
+@SecurityRequirement(name = "Bearer Authentication")
 @RestController
 @RequestMapping("/api/admin")
 class AdminController(
