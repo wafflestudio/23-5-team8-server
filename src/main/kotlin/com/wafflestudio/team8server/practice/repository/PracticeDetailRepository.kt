@@ -282,7 +282,7 @@ interface PracticeDetailRepository : JpaRepository<PracticeDetail, Long> {
     @Query(
         value = """
             SELECT c.course_number        AS attribute,
-                   MIN(c.course_name)     AS courseName,
+                   MIN(c.course_title)    AS courseName,
                    COUNT(pd.id)           AS count,
                    AVG(pd.reaction_time)  AS avgReactionTime,
                    MIN(pd.reaction_time)  AS minReactionTime,
