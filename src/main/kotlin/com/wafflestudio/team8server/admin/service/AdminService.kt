@@ -4,6 +4,10 @@ import com.wafflestudio.team8server.admin.dto.AdminDailyCountItem
 import com.wafflestudio.team8server.admin.dto.AdminDailyStatsResponse
 import com.wafflestudio.team8server.admin.dto.AdminDbStatsResponse
 import com.wafflestudio.team8server.admin.dto.AdminReactionTimeHistogramResponse
+import com.wafflestudio.team8server.admin.dto.CourseAttributeType
+import com.wafflestudio.team8server.admin.dto.ReactionTimeByAttributeItem
+import com.wafflestudio.team8server.admin.repository.ReactionTimeByCourseAttributeProjection
+import com.wafflestudio.team8server.admin.repository.ReactionTimeByCourseNumberProjection
 import com.wafflestudio.team8server.practice.repository.PracticeDetailRepository
 import com.wafflestudio.team8server.practice.repository.PracticeLogRepository
 import com.wafflestudio.team8server.user.repository.UserRepository
@@ -59,6 +63,31 @@ class AdminService(
         private const val MAX_MS = 30000
         private const val BIN_COUNT = MAX_MS / BIN_SIZE_MS // 3000
     }
+
+    @Transactional(readOnly = true)
+    fun getReactionTimeByAttribute(type: CourseAttributeType): List<ReactionTimeByAttributeItem> =
+        when (type) {
+            CourseAttributeType.CLASSIFICATION -> practiceDetailRepository.groupReactionTimeByClassification().toItems()
+            CourseAttributeType.COLLEGE -> practiceDetailRepository.groupReactionTimeByCollege().toItems()
+            CourseAttributeType.DEPARTMENT -> practiceDetailRepository.groupReactionTimeByDepartment().toItems()
+            CourseAttributeType.ACADEMIC_COURSE -> practiceDetailRepository.groupReactionTimeByAcademicCourse().toItems()
+            CourseAttributeType.ACADEMIC_YEAR -> practiceDetailRepository.groupReactionTimeByAcademicYear().toItems()
+            CourseAttributeType.CREDIT -> practiceDetailRepository.groupReactionTimeByCredit().toItems()
+            CourseAttributeType.COURSE_NUMBER -> practiceDetailRepository.groupReactionTimeByCourseNumber().toItems()
+        }
+
+    private fun List<ReactionTimeByCourseAttributeProjection>.toItems() =
+        map {
+            ReactionTimeByAttributeItem(
+                attribute = it.getAttribute(),
+                courseName = (it as? ReactionTimeByCourseNumberProjection)?.getCourseName(),
+                count = it.getCount(),
+                avgReactionTime = it.getAvgReactionTime(),
+                minReactionTime = it.getMinReactionTime(),
+                maxReactionTime = it.getMaxReactionTime(),
+                successCount = it.getSuccessCount(),
+            )
+        }
 
     @Transactional(readOnly = true)
     fun getReactionTimeHistogram(): AdminReactionTimeHistogramResponse {

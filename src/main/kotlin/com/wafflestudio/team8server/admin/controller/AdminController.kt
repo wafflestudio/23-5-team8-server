@@ -3,11 +3,14 @@ package com.wafflestudio.team8server.admin.controller
 import com.wafflestudio.team8server.admin.dto.AdminDailyStatsResponse
 import com.wafflestudio.team8server.admin.dto.AdminDbStatsResponse
 import com.wafflestudio.team8server.admin.dto.AdminReactionTimeHistogramResponse
+import com.wafflestudio.team8server.admin.dto.CourseAttributeType
+import com.wafflestudio.team8server.admin.dto.ReactionTimeByAttributeItem
 import com.wafflestudio.team8server.admin.service.AdminService
 import com.wafflestudio.team8server.common.auth.LoggedInUserId
 import com.wafflestudio.team8server.common.exception.BadRequestException
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.web.bind.annotation.GetMapping
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDate
 
 @Tag(name = "Admin", description = "관리자 API")
+@SecurityRequirement(name = "Bearer Authentication")
 @RestController
 @RequestMapping("/api/admin")
 class AdminController(
@@ -53,4 +57,16 @@ class AdminController(
     fun getReactionTimeHistogram(
         @Parameter(hidden = true) @LoggedInUserId userId: Long,
     ): AdminReactionTimeHistogramResponse = adminService.getReactionTimeHistogram()
+
+    @Operation(
+        summary = "과목 속성별 반응속도 통계 조회",
+        description =
+            "과목 속성(CLASSIFICATION, COLLEGE, DEPARTMENT, ACADEMIC_COURSE," +
+                "ACADEMIC_YEAR, CREDIT, COURSE_NUMBER)별 반응속도 통계를 조회합니다. (관리자 전용)",
+    )
+    @GetMapping("/stats/reaction-times/by-attribute")
+    fun getReactionTimeByAttribute(
+        @Parameter(hidden = true) @LoggedInUserId userId: Long,
+        @RequestParam type: CourseAttributeType,
+    ): List<ReactionTimeByAttributeItem> = adminService.getReactionTimeByAttribute(type)
 }
