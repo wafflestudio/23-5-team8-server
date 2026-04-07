@@ -60,7 +60,9 @@ class AdminController(
 
     @Operation(
         summary = "과목 속성별 반응속도 통계 조회",
-        description = "과목 속성(CLASSIFICATION, COLLEGE, DEPARTMENT, ACADEMIC_COURSE, ACADEMIC_YEAR, CREDIT, COURSE_NUMBER)별 반응속도 통계를 조회합니다. (관리자 전용)",
+        description =
+            "과목 속성(CLASSIFICATION, COLLEGE, DEPARTMENT, ACADEMIC_COURSE," +
+                "ACADEMIC_YEAR, CREDIT, COURSE_NUMBER)별 반응속도 통계를 조회합니다. (관리자 전용)",
     )
     @GetMapping("/stats/reaction-times/by-attribute")
     fun getReactionTimeByAttribute(
