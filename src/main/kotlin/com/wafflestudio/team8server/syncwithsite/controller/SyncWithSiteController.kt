@@ -17,24 +17,24 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/syncwithsite")
 class SyncWithSiteController(
-    private val syncWithSiteService: SyncWithSiteService
+    private val syncWithSiteService: SyncWithSiteService,
 ) {
-
     @Operation(
         summary = "수강신청 기간 조회",
-        description = "서울대학교 수강신청 사이트를 크롤링하여 이번 학기 수강신청 기간 정보를 가져옵니다."
+        description = "서울대학교 수강신청 사이트를 크롤링하여 이번 학기 수강신청 기간 정보를 가져옵니다.",
     )
     @ApiResponses(
         value = [
             ApiResponse(
                 responseCode = "200",
-                description = "크롤링 및 파싱 성공"),
+                description = "크롤링 및 파싱 성공",
+            ),
             ApiResponse(
                 responseCode = "404",
                 description = "수강신청 사이트 접속 실패 또는 대상 요소를 찾을 수 없음",
-                content = [Content(schema = Schema(implementation = ErrorResponse::class))]
-            )
-        ]
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
     )
     @GetMapping("/sugang-period")
     fun getSugangPeriod(): SugangPeriodResponse = syncWithSiteService.getSugangPeriod()

@@ -14,15 +14,15 @@ import java.time.Duration
 
 @Service
 class SyncWithSiteService {
-
     fun getSugangPeriod(): SugangPeriodResponse {
         // Chrome driver options
         WebDriverManager.chromedriver().setup()
-        val options = ChromeOptions().apply {
-            addArguments("--headless=new")  // background run
-            addArguments("--no-sandbox")
-            addArguments("--disable-dev-shm-usage")
-        }
+        val options =
+            ChromeOptions().apply {
+                addArguments("--headless=new") // background run
+                addArguments("--no-sandbox")
+                addArguments("--disable-dev-shm-usage")
+            }
 
         val driver = ChromeDriver(options)
 
@@ -34,30 +34,34 @@ class SyncWithSiteService {
             val wait = WebDriverWait(driver, Duration.ofSeconds(15))
             wait.until(
                 ExpectedConditions.presenceOfElementLocated(
-                    By.cssSelector("div.mg-item.mg-period-guide table")
-                )
+                    By.cssSelector("div.mg-item.mg-period-guide table"),
+                ),
             )
 
             // Parse original source html
-            val pageSource = driver.pageSource
-                ?: throw ResourceNotFoundException("No pageSource found")
+            val pageSource =
+                driver.pageSource
+                    ?: throw ResourceNotFoundException("No pageSource found")
             val document = Jsoup.parse(pageSource)
 
             // Select header and table body both (container)
-            val container = document.select("div.mg-item.mg-period-guide .con-box").firstOrNull()
-                ?: throw ResourceNotFoundException("Cannot found SugangPeriod container")
+            val container =
+                document.select("div.mg-item.mg-period-guide .con-box").firstOrNull()
+                    ?: throw ResourceNotFoundException("Cannot found SugangPeriod container")
 
             // Extract h2 header
-            val headerElement = container.select("h2").firstOrNull()
-                ?: throw ResourceNotFoundException("Cannot found SugangPeriod h2 header")
+            val headerElement =
+                container.select("h2").firstOrNull()
+                    ?: throw ResourceNotFoundException("Cannot found SugangPeriod h2 header")
 
             // Change every separators to space
             // "{abcd}학년도 {n}학기 수강신청 기간안내 ※ 장바구니는 선착순이 아닙니다."
             val headerText = headerElement.text().trim()
 
             // Extract table
-            val tableElement = container.select("div.table-con table").firstOrNull()
-                ?: throw IllegalStateException("Cannot found SugangPeriod table")
+            val tableElement =
+                container.select("div.table-con table").firstOrNull()
+                    ?: throw IllegalStateException("Cannot found SugangPeriod table")
 
             // Concatenate raw [header + table
             val rawHtml = headerElement.outerHtml() + "\n" + tableElement.outerHtml()
@@ -77,8 +81,8 @@ class SyncWithSiteService {
                             category = category,
                             date = date,
                             time = time,
-                            remark = remark
-                        )
+                            remark = remark,
+                        ),
                     )
                 }
             }
@@ -86,9 +90,8 @@ class SyncWithSiteService {
             return SugangPeriodResponse(
                 header = headerText,
                 raw = rawHtml,
-                body = body
+                body = body,
             )
-
         } finally {
             driver.quit()
         }
