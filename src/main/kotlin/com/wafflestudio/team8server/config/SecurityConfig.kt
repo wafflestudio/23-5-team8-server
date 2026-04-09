@@ -37,6 +37,8 @@ class SecurityConfig(
             }.authorizeHttpRequests { auth ->
                 // URL별 권한 설정
                 auth
+                    // CORS Preflight 요청 (OPTIONS)
+                    .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                     // 관리자 전용 API
                     .requestMatchers(
                         "/api/courses/import",
