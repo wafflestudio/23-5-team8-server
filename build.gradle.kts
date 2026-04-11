@@ -77,7 +77,7 @@ dependencies {
     implementation("com.github.pjfanning:excel-streaming-reader:4.2.1")
 
     // OCI Vault (spring-waffle)
-    implementation("com.wafflestudio.spring:spring-boot-starter-waffle-oci-vault:1.1.0")
+    implementation("com.wafflestudio.spring:spring-boot-starter-waffle-oci-vault:2.1.0")
 
     // OCI SDK for Object Storage
     implementation("com.oracle.oci.sdk:oci-java-sdk-objectstorage:3.57.2")
