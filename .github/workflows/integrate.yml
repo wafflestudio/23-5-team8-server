@@ -7,6 +7,10 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    # 패키지 읽기 권한을 명시적으로 부여
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 21
@@ -20,6 +24,10 @@ jobs:
 
       - name: Run Ktlint Check
         run: ./gradlew ktlintCheck --no-daemon
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Tests
         run: ./gradlew test -Dspring.profiles.active=test --no-daemon
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
