@@ -9,11 +9,6 @@ data class SugangPeriodResponse(
         example = "2026학년도 1학기 수강신청 기간안내 ※ 장바구니는 선착순이 아닙니다.",
     )
     val header: String,
-    @Schema(
-        description = "수강신청 안내 및 테이블 원본 HTML",
-        example = "<h2>...</h2><table>...</table>",
-    )
-    val raw: String,
     @Schema(description = "파싱된 수강신청 기간 목록")
     val body: List<SugangPeriodDto>,
 )
