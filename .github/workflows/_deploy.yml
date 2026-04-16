@@ -77,11 +77,6 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Cancel stuck rollout
-        run: |
-          kubectl -n ${{ inputs.namespace }} rollout undo deployment/${{ inputs.deployment_name }} 2>/dev/null || true
-          kubectl -n ${{ inputs.namespace }} rollout status deployment/${{ inputs.deployment_name }} --timeout=60s 2>/dev/null || true
-
       - name: Update deployment image
         run: |
           CONTAINER=$(kubectl -n ${{ inputs.namespace }} get deployment/${{ inputs.deployment_name }} -o jsonpath='{.spec.template.spec.containers[0].name}')
@@ -89,7 +84,3 @@ jobs:
           kubectl -n ${{ inputs.namespace }} set image \
             deployment/${{ inputs.deployment_name }} \
             $CONTAINER=$OCIR_REGISTRY/$OCIR_NAMESPACE/$OCIR_REPOSITORY:$IMAGE_TAG
-
-      - name: Wait for rollout
-        run: |
-          kubectl -n ${{ inputs.namespace }} rollout status deployment/${{ inputs.deployment_name }} --timeout=300s
