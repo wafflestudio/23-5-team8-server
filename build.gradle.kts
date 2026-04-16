@@ -75,8 +75,6 @@ dependencies {
     implementation("org.apache.poi:poi:5.2.5")
     implementation("org.apache.poi:poi-ooxml:5.2.5")
     implementation("com.github.pjfanning:excel-streaming-reader:4.2.1")
-    implementation("org.seleniumhq.selenium:selenium-java:4.18.1")
-    implementation("io.github.bonigarcia:webdrivermanager:5.7.0")
     implementation("org.jsoup:jsoup:1.17.2")
 
     // OCI Vault (spring-waffle)

@@ -30,7 +30,7 @@ class SyncWithSiteService(
     }
 
     fun crawlSugangPeriod(): SugangPeriodResponse {
-        // Jsoup으로 직접 HTTP 요청 (Selenium/Chrome 불필요 — 데이터가 정적 HTML에 포함됨)
+        // Jsoup HTTP 요청으로 크롤링
         val document =
             Jsoup
                 .connect(SUGANG_URL)
