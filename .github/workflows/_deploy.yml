@@ -76,6 +76,13 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      - name: List deployments (debug)
+        run: |
+          echo "=== All namespaces ==="
+          kubectl get deployments --all-namespaces
+          echo "=== Namespace: ${{ inputs.namespace }} ==="
+          kubectl -n ${{ inputs.namespace }} get deployments
+
       - name: Update deployment image
         run: |
           kubectl -n ${{ inputs.namespace }} set image \
