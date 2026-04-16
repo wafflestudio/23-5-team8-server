@@ -43,11 +43,9 @@ class ManualSyncWithSiteIntegrationTest
             syncWithSiteRunRepository.deleteAll()
         }
 
-        // @Disabled("수동 크롤링 점검용 테스트 - 평소엔 비활성화 (실행 시간 소요됨)")
         @Test
-        @DisplayName("Fallback 테스트: DB 캐시가 없으면 Selenium 크롤링을 수행하여 정제된 데이터(raw 제외)를 반환해야 한다")
-        fun `get sugang period fallback to real time selenium crawl when db is empty`() {
-            // Crawl info data due to empty cache DB
+        @DisplayName("Fallback 테스트: DB 캐시가 없으면 Jsoup 크롤링을 수행하여 데이터를 반환해야 한다")
+        fun `get sugang period fallback to real time jsoup crawl when db is empty`() {
             mockMvc
                 .perform(
                     get("/api/v1/syncwithsite/sugang-period")
@@ -61,11 +59,9 @@ class ManualSyncWithSiteIntegrationTest
                 .andExpect(jsonPath("$.body[0].category").isString)
         }
 
-        // @Disabled("수동 크롤링 점검용 테스트 - 평소엔 비활성화 (실행 시간 소요됨)")
         @Test
-        @DisplayName("동기화 즉시 실행 시 Selenium 크롤링을 수행하고 DB에 결과가 덤핑되어야 한다")
+        @DisplayName("동기화 즉시 실행 시 Jsoup 크롤링을 수행하고 DB에 결과가 덤핑되어야 한다")
         fun `run once and check auto status with dump data`() {
-            // Crawl info data due to trigger
             mockMvc
                 .perform(
                     post("/api/v1/syncwithsite/run"),
@@ -74,7 +70,6 @@ class ManualSyncWithSiteIntegrationTest
                 .andExpect(jsonPath("$.accepted").value(true))
                 .andExpect(jsonPath("$.startedAt").exists())
 
-            // Check the data is pushed to DB
             mockMvc
                 .perform(
                     get("/api/v1/syncwithsite/auto"),
