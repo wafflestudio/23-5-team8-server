@@ -45,6 +45,8 @@ class SecurityConfig(
                         "/api/courses/import",
                         "/api/courses/course-sync/**",
                         "/api/admin/**",
+                        "/api/v1/syncwithsite/run",
+                        "/api/v1/syncwithsite/auto/**",
                     ).hasRole("ADMIN")
                     .requestMatchers(
                         org.springframework.http.HttpMethod.POST,
@@ -68,6 +70,7 @@ class SecurityConfig(
                         "/api/leaderboard",
                         "/api/leaderboard/weekly",
                         "/api/v1/health",
+                        "/api/v1/syncwithsite/sugang-period",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/swagger-ui.html",
