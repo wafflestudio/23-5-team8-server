@@ -36,6 +36,8 @@ class SyncWithSiteService(
         WebDriverManager.chromedriver().setup()
         val options =
             ChromeOptions().apply {
+                // 시스템에 설치된 Chromium 사용 (Docker 환경)
+                System.getenv("CHROME_BIN")?.let { setBinary(it) }
                 addArguments("--headless=new") // background run
                 addArguments("--no-sandbox")
                 addArguments("--disable-dev-shm-usage")
