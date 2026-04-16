@@ -11,8 +11,8 @@ jobs:
       ocir_repository: snuclear-dev/snuclear-server
       dockerfile: Dockerfile
       namespace: default
-      deployment_name: snuclear-server
-      container_name: snuclear-server
+      deployment_name: backend-app
+      container_name: backend-app
     secrets:
       OCI_AUTH_TOKEN: ${{ secrets.OCI_AUTH_TOKEN }}
       KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
