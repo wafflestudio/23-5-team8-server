@@ -8,6 +8,8 @@ import com.wafflestudio.team8server.syncwithsite.model.SyncWithSiteSetting
 import com.wafflestudio.team8server.syncwithsite.repository.SyncWithSiteRunRepository
 import com.wafflestudio.team8server.syncwithsite.repository.SyncWithSiteSettingRepository
 import org.jsoup.Jsoup
+import org.jsoup.nodes.TextNode
+import org.jsoup.select.Elements
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -27,6 +29,18 @@ class SyncWithSiteService(
     companion object {
         private const val SUGANG_URL = "https://sugang.snu.ac.kr/sugang/co/co010.action"
         private const val TIMEOUT_MS = 15_000
+        private const val NL_MARKER = "\u0000NL\u0000"
+    }
+
+    private fun textWithBr(elements: Elements): String {
+        if (elements.isEmpty()) return ""
+        return elements
+            .joinToString("") { elem ->
+                val clone = elem.clone()
+                clone.select("br").forEach { it.replaceWith(TextNode(NL_MARKER)) }
+                clone.text()
+            }.replace(NL_MARKER, "\n")
+            .trim()
     }
 
     fun crawlSugangPeriod(): SugangPeriodResponse {
@@ -46,12 +60,13 @@ class SyncWithSiteService(
                 ?: throw ResourceNotFoundException("Cannot found SugangPeriod container")
 
         // Extract h2 header
-        val headerElement =
-            container.select("h2").firstOrNull()
-                ?: throw ResourceNotFoundException("Cannot found SugangPeriod h2 header")
+        val headerElements = container.select("h2")
+        if (headerElements.isEmpty()) {
+            throw ResourceNotFoundException("Cannot found SugangPeriod h2 header")
+        }
 
         // "{abcd}학년도 {n}학기 수강신청 기간안내 ※ 장바구니는 선착순이 아닙니다."
-        val headerText = headerElement.text().trim()
+        val headerText = textWithBr(headerElements)
 
         // Extract table
         val tableElement =
@@ -62,10 +77,10 @@ class SyncWithSiteService(
         val body = mutableListOf<SugangPeriodDto>()
         val rows = tableElement.select("tbody tr")
         for (row in rows) {
-            val category = row.select("th[data-th=구분]").text()
-            val date = row.select("td[data-th=일자]").text()
-            val time = row.select("td[data-th=시간]").text()
-            val remark = row.select("td[data-th=대상]").text()
+            val category = textWithBr(row.select("th[data-th=구분]"))
+            val date = textWithBr(row.select("td[data-th=일자]"))
+            val time = textWithBr(row.select("td[data-th=시간]"))
+            val remark = textWithBr(row.select("td[data-th=대상]"))
 
             if (category.isNotBlank() || date.isNotBlank()) {
                 body.add(

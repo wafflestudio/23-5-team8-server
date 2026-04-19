@@ -1,11 +1,11 @@
-# AllClear Server
+# SnuClear Server
 
 **서울대학교 수강신청 연습 서비스 - 백엔드 레포지토리**
 
 ![메인페이지](docs/images/메인페이지.png)
 
-- 서비스: https://allclear.codes
-- API 문서: https://allclear.codes/swagger-ui/index.html
+- 서비스: https://snuclear.wafflestudio.com
+- API 문서: https://snuclear-server.wafflestudio.com/swagger-ui/index.html
 - 프론트엔드 레포: https://github.com/wafflestudio/23-5-team8-web
 
 ## 팀원
@@ -24,7 +24,7 @@
 
 ## 이용가이드
 
-서비스 이용가이드는 [여기](https://boulder-argon-568.notion.site/AllClear-2f30bdb7bbc18009802eccb739810da2)에서 확인할 수 있습니다.
+서비스 이용가이드는 [여기](https://boulder-argon-568.notion.site/SnuClear-2f30bdb7bbc18009802eccb739810da2)에서 확인할 수 있습니다.
 
 ## 주요 기능
 
