@@ -29,17 +29,21 @@ class SyncWithSiteService(
     companion object {
         private const val SUGANG_URL = "https://sugang.snu.ac.kr/sugang/co/co010.action"
         private const val TIMEOUT_MS = 15_000
-        private const val NL_MARKER = "\u0000NL\u0000"
     }
 
     private fun textWithBr(elements: Elements): String {
         if (elements.isEmpty()) return ""
-        return elements
-            .joinToString("") { elem ->
+        val raw =
+            elements.joinToString("\n") { elem ->
                 val clone = elem.clone()
-                clone.select("br").forEach { it.replaceWith(TextNode(NL_MARKER)) }
-                clone.text()
-            }.replace(NL_MARKER, "\n")
+                clone.select("br").forEach { it.replaceWith(TextNode("\n")) }
+                clone.wholeText()
+            }
+        return raw
+            .replace("\r\n", "\n")
+            .replace(Regex("\\n[ \\t]+"), " ")
+            .replace(Regex("[ \\t]+\\n"), "\n")
+            .replace(Regex("\\n{2,}"), "\n")
             .trim()
     }
 
