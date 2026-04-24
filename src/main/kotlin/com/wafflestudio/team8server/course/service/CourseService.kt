@@ -11,6 +11,7 @@ import com.wafflestudio.team8server.course.model.getDisplayedRegistrationCount
 import com.wafflestudio.team8server.course.model.withId
 import com.wafflestudio.team8server.course.repository.CourseRepository
 import com.wafflestudio.team8server.course.repository.CourseSpecification
+import com.wafflestudio.team8server.course.sync.CourseSyncProperties
 import jakarta.persistence.EntityManager
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -29,6 +30,7 @@ class CourseService(
     @Value("\${course.import.batch-size:500}")
     private val courseImportBatchSize: Int,
     private val enrollmentPeriodProperties: EnrollmentPeriodProperties,
+    private val courseSyncProperties: CourseSyncProperties,
 ) {
     private val log = LoggerFactory.getLogger(CourseExcelParser::class.java)
 
@@ -40,6 +42,8 @@ class CourseService(
                 Sort.by("courseTitle").ascending().and(Sort.by("id").ascending()),
             )
 
+        val defaultTarget = courseSyncProperties.defaultTarget
+
         val specification =
             CourseSpecification.search(
                 query = request.query,
@@ -49,6 +53,8 @@ class CourseService(
                 college = request.college,
                 department = request.department,
                 classification = request.classification,
+                year = defaultTarget.year,
+                semester = defaultTarget.semester,
             )
 
         val page = courseRepository.findAll(specification, pageable)
