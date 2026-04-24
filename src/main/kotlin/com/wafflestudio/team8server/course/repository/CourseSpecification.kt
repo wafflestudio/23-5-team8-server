@@ -1,6 +1,7 @@
 package com.wafflestudio.team8server.course.repository
 
 import com.wafflestudio.team8server.course.model.Course
+import com.wafflestudio.team8server.course.model.Semester
 import jakarta.persistence.criteria.Predicate
 import org.springframework.data.jpa.domain.Specification
 
@@ -13,6 +14,8 @@ object CourseSpecification {
         college: String?,
         department: String?,
         classification: String?,
+        year: Int?,
+        semester: Semester?,
     ): Specification<Course> =
         Specification { root, _, cb ->
             val predicates = mutableListOf<Predicate>()
@@ -85,6 +88,14 @@ object CourseSpecification {
 
             if (!classification.isNullOrBlank()) {
                 predicates += cb.equal(root.get<String>("classification"), classification)
+            }
+
+            if (year != null) {
+                predicates += cb.equal(root.get<Int>("year"), year)
+            }
+
+            if (semester != null) {
+                predicates += cb.equal(root.get<Semester>("semester"), semester)
             }
 
             cb.and(*predicates.toTypedArray())
