@@ -10,20 +10,8 @@ on:
         required: true
         type: string
         description: "Dockerfile path (e.g., Dockerfile)"
-      namespace:
-        required: true
-        type: string
-      deployment_name:
-        required: true
-        type: string
-      container_name:
-        required: false
-        type: string
-        description: "Optional - auto-detected from deployment if not provided"
     secrets:
       OCI_AUTH_TOKEN:
-        required: true
-      KUBE_CONFIG_DATA:
         required: true
 
 jobs:
@@ -65,22 +53,3 @@ jobs:
             --platform linux/arm64
           docker push $OCIR_REGISTRY/$OCIR_NAMESPACE/$OCIR_REPOSITORY:$IMAGE_TAG
           echo "image=$OCIR_REGISTRY/$OCIR_NAMESPACE/$OCIR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v4
-        with:
-          version: latest
-
-      - name: Set up kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-
-      - name: Update deployment image
-        run: |
-          CONTAINER=$(kubectl -n ${{ inputs.namespace }} get deployment/${{ inputs.deployment_name }} -o jsonpath='{.spec.template.spec.containers[0].name}')
-          echo "Container: $CONTAINER, Image: $OCIR_REGISTRY/$OCIR_NAMESPACE/$OCIR_REPOSITORY:$IMAGE_TAG"
-          kubectl -n ${{ inputs.namespace }} set image \
-            deployment/${{ inputs.deployment_name }} \
-            $CONTAINER=$OCIR_REGISTRY/$OCIR_NAMESPACE/$OCIR_REPOSITORY:$IMAGE_TAG
